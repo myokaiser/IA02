@@ -17,37 +17,40 @@ class Phase1():
     def __init__(self ) -> None:
         self.hitman = HitmanReferee()
         self.informations_actuelles = self.hitman.start_phase1()
-        self.map = Map(self.informations_actuelles["m"], self.informations_actuelles["n"], self.informations_actuelles["guard_count"], self.informations_actuelles["civil_count"])
+        self.map = Map(
+            self.informations_actuelles["m"], # init x
+            self.informations_actuelles["n"], # init y
+            self.informations_actuelles["guard_count"], 
+            self.informations_actuelles["civil_count"]
+            )
 
 
     def vision(self) -> int:
         nb_cases_visible = len(self.informations_actuelles['vision'])
+        is_a_personne = False
         for i in range(nb_cases_visible):
 
             coord_case = self.informations_actuelles['vision'][i][0]
             element = self.informations_actuelles['vision'][i][1]
             if element == HC.WALL:
-                clause_personne = self.map.var_not_personne(coord_case)
                 clause = self.map.var_mur(coord_case)
             elif element == HC.EMPTY :
-                clause_personne = self.map.var_not_personne(coord_case)
                 clause = self.map.var_rien(coord_case)
             elif element == HC.TARGET:
-                clause_personne = self.map.var_not_personne(coord_case)
                 clause = self.map.var_cible(coord_case)
             elif element == HC.PIANO_WIRE:
-                clause_personne = self.map.var_not_personne(coord_case)
                 clause = self.map.var_corde(coord_case)
             elif element == HC.SUIT:
                 clause = self.map.var_costume(coord_case)
-                clause_personne = self.map.var_not_personne(coord_case)
+                
             elif element == HC.GUARD_E or element == HC.GUARD_N or element == HC.GUARD_S or element == HC.GUARD_W:
-                clause_personne = self.map.var_personne(coord_case)
-                cases_vu = self.map.case_guard_vis(coord_case[1],coord_case[0],element)
-                print("vision du garde ("+str(coord_case[1])+","+str(coord_case[0])+") : "+str(cases_vu))
+                is_a_personne = True
+                cases_vu = self.map.case_guard_vis(coord_case[0],coord_case[1],element)
+                print("vision du garde ("+str(coord_case[0])+","+str(coord_case[1])+") : "+str(cases_vu))
                 for case in cases_vu : 
                     clause_safe = self.map.var_not_safe((case[1],case[0]))
                     self.map.add_safe_clause(clause_safe)
+                    self.map.sat.add_clause(clause_safe)
                 if element == HC.GUARD_E : 
                     clause = self.map.var_guard_e(coord_case)
                 elif element == HC.GUARD_N : 
@@ -58,13 +61,14 @@ class Phase1():
                     clause = self.map.var_guard_w(coord_case)
 
             elif element == HC.CIVIL_E or element == HC.CIVIL_N or element == HC.CIVIL_S or element == HC.CIVIL_W:
-               
+                is_a_personne = True
                 clause_personne = self.map.var_personne(coord_case)
-                cases_vu = self.map.case_civil_vis(coord_case[1],coord_case[0],element)
-                print("vision du garde ("+str(coord_case[1])+","+str(coord_case[0])+") : "+str(cases_vu))
+                cases_vu = self.map.case_civil_vis(coord_case[0],coord_case[1],element)
+                print("vision du garde (" + str(coord_case[0]) + "," + str(coord_case[1]) + ") : " + str(cases_vu))
                 for case in cases_vu : 
-                    clause_safe = self.map.var_not_safe((case[1],case[0]))
+                    clause_safe = self.map.var_not_safe((case[0],case[1]))
                     self.map.add_safe_clause(clause_safe)
+                    self.map.sat.add_clause(clause_safe)
 
                 if element == HC.CIVIL_E : 
                     clause = self.map.var_civil_e(coord_case)
@@ -75,9 +79,16 @@ class Phase1():
                 elif element == HC.CIVIL_W : 
                     clause = self.map.var_civil_w(coord_case)
 
+            if is_a_personne == False :
+                clause_personne = self.map.var_not_personne(coord_case)
+            else :
+                clause_personne = self.map.var_personne(coord_case)
             self.map.add_person_clause(clause_personne)
+            self.map.sat.add_clause(clause_personne)
             self.map.add_known_clause(clause)
-            print(str(element)+ " en ("+ str(coord_case[0]) + ", "+str(coord_case[1]) + ")")
+            self.map.sat.add_clause(clause)
+            print(str(element)+ " en ("+ str(coord_case[0]) + ", "+str(coord_case[1]) + ")", end="|")
+        print()
             
             
         return nb_cases_visible
@@ -121,9 +132,8 @@ class Phase1():
                 else:
                     pass
 
-    def affichage_jeu_phase1(self) -> None:
-        print("position : ("+str(self.informations_actuelles['position'][0])+" , "+str(self.informations_actuelles['position'][1])+")")
-        display_map_phase1(self.map.known_Map(), self.informations_actuelles)
+    def affichage_jeu_phase1(self, position: str, iteration: str, score: str, nb_co:str) -> None:
+        display_map_phase1(self.map.known_Map(), position, iteration, score, nb_co, self.informations_actuelles)
 
     def case_more_safe(self,cases: list) -> Tuple:
         unsafe = []
@@ -171,59 +181,45 @@ class Phase1():
         print(true_map)
         return dictionnaire
 
-    def set_orientation_case_suiv(self,ligne:int,colonne:int) -> None:
+    def set_orientation_case_suiv(self,ligne:int, colonne:int, position: str, iteration: str, score: str, nb_co:str) -> None:
         orientation = self.informations_actuelles['orientation']
         pos = self.informations_actuelles['position']
         if orientation == HC.N :
             if ligne == pos[1] - 1:
                 self.hitman.turn_clockwise()
-                self.affichage_jeu_phase1()
                 self.hitman.turn_clockwise()
-                self.affichage_jeu_phase1()
             elif colonne == pos[0] - 1:
                 self.hitman.turn_anti_clockwise()
-                self.affichage_jeu_phase1()
             elif colonne == pos[0] + 1:
                 self.hitman.turn_clockwise()
-                self.affichage_jeu_phase1()
         elif orientation == HC.E :
             if ligne == pos[1] - 1:
                 self.hitman.turn_clockwise()
-                self.affichage_jeu_phase1()
             elif ligne == pos[1] + 1:
                 self.hitman.turn_anti_clockwise()
-                self.affichage_jeu_phase1()
             elif colonne == pos[0] - 1:
                 self.hitman.turn_clockwise()   
-                self.affichage_jeu_phase1()
                 self.hitman.turn_clockwise()    
-                self.affichage_jeu_phase1()
         
         elif orientation == HC.S :
             if ligne == pos[1] + 1:
                 self.hitman.turn_clockwise()
-                self.affichage_jeu_phase1()
                 self.hitman.turn_clockwise()
-                self.affichage_jeu_phase1()
             elif colonne == pos[0] - 1:
                 self.hitman.turn_clockwise()
-                self.affichage_jeu_phase1()
             elif colonne == pos[0] + 1:
                 self.hitman.turn_anti_clockwise()  
-                self.affichage_jeu_phase1()
         
         elif orientation == HC.W :
             if ligne == pos[1] + 1:
                 self.hitman.turn_clockwise()
-                self.affichage_jeu_phase1()
             elif ligne == pos[1] - 1:
                 self.hitman.turn_anti_clockwise()
-                self.affichage_jeu_phase1()
             elif colonne == pos[0] + 1:
                 self.hitman.turn_clockwise()  
-                self.affichage_jeu_phase1()
                 self.hitman.turn_clockwise()   
-                self.affichage_jeu_phase1()
+
+        self.affichage_jeu_phase1(position, iteration, score, nb_co)
     
 
     def phase1(self) -> Dict:
@@ -231,19 +227,24 @@ class Phase1():
         it=0
         phase1 = []
         nb_cases = self.map.nb_colonnes * self.map.nb_lignes
-        while(it<2*nb_cases):
+        while(it < 2 * nb_cases):
             phase1.append([self.informations_actuelles['position'][0],self.informations_actuelles['position'][1]])
-            print("ITERATION : "+str(it))
-            print("Score vision : 0")
+            nb_cases_trouvees = self.map.nb_known_case()
+
+            nb_co = "Nb cases connues : " + str(nb_cases_trouvees)
+            position = "position : (" + str(self.informations_actuelles['position'][0]) + " , " + str(self.informations_actuelles['position'][1]) + ")"
+            iteration = "ITERATION : " + str(it)
+            score = "Score vision : 0"
+
             self.vision()
             self.hear()
             self.map.set_grille_score(self.informations_actuelles['position'][1],self.informations_actuelles['position'][0],-6)
             
             if self.map.case_go(self.informations_actuelles['position'][1],self.informations_actuelles['position'][0]) == False :
                 for i in range(3):
-                    print("Score vision : "+str(i+1))
+                    score = "Score vision : "+str(i+1)
                     self.informations_actuelles = self.hitman.turn_anti_clockwise()
-                    self.affichage_jeu_phase1()
+                    self.affichage_jeu_phase1(position, iteration, score, nb_co)
                     self.vision()
             
             move_case = self.map.move_case(self.informations_actuelles['position'][1],self.informations_actuelles['position'][0])
@@ -254,21 +255,23 @@ class Phase1():
                     cases_possible_deplacement.append(case)
             
             if len(cases_possible_deplacement) >= 1 : 
+                print("case more safe", cases_possible_deplacement)
                 case_suivante = self.case_more_safe(cases_possible_deplacement)
             else : 
                 case_suivante = cases_possible_deplacement[0]
             
             clause_passage = self.map.var_pass_case((self.informations_actuelles['position'][0],self.informations_actuelles['position'][1]))
             self.map.add_pass_clause(clause_passage)
+            self.map.sat.add_clause(clause_passage)
 
-            self.set_orientation_case_suiv(case_suivante[0],case_suivante[1])
+            self.set_orientation_case_suiv(case_suivante[0],case_suivante[1], position, iteration, score, nb_co)
             self.informations_actuelles = self.hitman.move()
-            self.affichage_jeu_phase1()
+            self.affichage_jeu_phase1(position, iteration, score, nb_co)
 
             it += 1
             print("Parcours : "+str(phase1))
-            nb_cases_trouvees = self.map.nb_known_case()
-            print("Nb cases connues : "+str(nb_cases_trouvees))
+            # nb_cases_trouvees = self.map.nb_known_case()
+            # print("Nb cases connues : "+str(nb_cases_trouvees))
             if nb_cases_trouvees >= self.map.nb_cases_a_trouver:
                 return self.end_phase_1()
 

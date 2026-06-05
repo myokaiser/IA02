@@ -4,6 +4,7 @@ from itertools import combinations
 import numpy as np
 import os
 from hitman.hitman import HC 
+from pysat.solvers import Glucose3
 
 Grid = List[List[int]] 
 PropositionnalVariable = int
@@ -11,31 +12,31 @@ Literal = int
 Clause = List[Literal]
 ClauseBase = List[Clause]
 Model = List[Literal]
-Position = [int,int]
+Position = List[int]
 Orientation = str #N,E,S,O
 
 def affiche_star_1() :
-    print("___    ___     ___     _________     ___        __                    ___    __")
-    print("\ /    \ /     \ /    |/  | |  \|    \  \      / /         /\         \  \   \/")
-    print("| |    | |     | |        | |        |\  \    // |        /. \        ||\ \  ||")
-    print("| |____| |     | |        | |        ||\  \  //| |       // \ \       || \ \ ||")
-    print("| |    | |     | |        | |        || \  \// | |      //___\ \      ||  \ \||")
-    print("| |    | |     | |        | |        ||  \  /  | |     //     \ \     ||   \  |")
-    print("/_\    /_\     /_\        /_\       /_\   \/   /_\    /_\     /__\   /__\   \_|")
-    print("-------------------------------------------------------------------------------")
-    print("                    ___                      _          __                     ")
-    print("                   | _ \ ___  _  _  _ _   __| |        /  |                    ")
-    print("                   |   // _ \| || || ' \ / _` |         | |                    ")
-    print("                   |_|_\\\___/ \_._||_||_|\__/_|         |_|                   ")
-    print("-------------------------------------------------------------------------------")
+    print(r"___    ___     ___     _________     ___        __                    ___    __")
+    print(r"\ /    \ /     \ /    |/  | |  \|    \  \      / /         /\         \  \   \/")
+    print(r"| |    | |     | |        | |        |\  \    // |        /. \        ||\ \  ||")
+    print(r"| |____| |     | |        | |        ||\  \  //| |       // \ \       || \ \ ||")
+    print(r"| |    | |     | |        | |        || \  \// | |      //___\ \      ||  \ \||")
+    print(r"| |    | |     | |        | |        ||  \  /  | |     //     \ \     ||   \  |")
+    print(r"/_\    /_\     /_\        /_\       /_\   \/   /_\    /_\     /__\   /__\   \_|")
+    print(r"-------------------------------------------------------------------------------")
+    print(r"                    ___                      _          __                     ")
+    print(r"                   | _ \ ___  _  _  _ _   __| |        /  |                    ")
+    print(r"                   |   // _ \| || || ' \ / _` |         | |                    ")
+    print(r"                   |_|_\\___/ \_._||_||_|\__/_|         |_|                    ")
+    print(r"-------------------------------------------------------------------------------")
 
 def affiche_star_2() :
-    print("-------------------------------------------------------------------------------")
-    print("                    ___                      _          ___                    ")
-    print("                   | _ \ ___  _  _  _ _   __| |        |_  )                   ")
-    print("                   |   // _ \| || || ' \ / _` |         / /                    ")
-    print("                   |_|_\\\___/ \_._||_||_|\__/_|        /___|                  ")
-    print("-------------------------------------------------------------------------------")
+    print(r"-------------------------------------------------------------------------------")
+    print(r"                    ___                      _          ___                    ")
+    print(r"                   | _ \ ___  _  _  _ _   __| |        |_  )                   ")
+    print(r"                   |   // _ \| || || ' \ / _` |         / /                    ")
+    print(r"                   |_|_\\___/ \_._||_||_|\__/_|        /___|                   ")
+    print(r"-------------------------------------------------------------------------------")
 #-----------------------------AFFICHAGE MAP------------------------------------------------
 
 def remove(string: str) -> Dict:
@@ -47,7 +48,7 @@ def remove(string: str) -> Dict:
     dico = eval(string)
     return dico
 
-def display_map_phase1(map: Dict, state: Dict) -> None:
+def display_map_phase1(map: Dict, position: str, iteration: str, score: str, nb_co:str, state: Dict) -> None:
     symbols = {
         HC.EMPTY: " ",
         HC.SUIT: "S",
@@ -70,8 +71,8 @@ def display_map_phase1(map: Dict, state: Dict) -> None:
     }
 
     cell_width = 3
-    max_x = max(x for x, y in map.keys())
-    max_y = max(y for x, y in map.keys())
+    max_x = max(x for x, _ in map.keys())
+    max_y = max(y for _, y in map.keys())
     print("+-----" * (max_x + 1) + "+")
     for y in range(max_y, -1, -1):
         print("|", end="")
@@ -89,8 +90,18 @@ def display_map_phase1(map: Dict, state: Dict) -> None:
                 else:
                     symbol = symbols.get(element, "?")
             print(" {0:^{1}} |".format(symbol, cell_width), end="")
-        print()
+        if y == max_y :
+            print("\t", position) # display current position
+        elif y == max_y - 1 :
+            print("\t", iteration) # display current iteration
+        elif y == max_y - 2 :
+            print("\t", score) # display current score
+        elif y == max_y - 3 :
+            print("\t", nb_co) # display current number of known cases
+        else :
+            print()
         print("+-----" * (max_x + 1) + "+")
+
 
 def display_map(map: Dict, state: Dict) -> None:
     symbols = {
@@ -158,7 +169,7 @@ def write_dimacs_file(dimacs: str, filename: str):
 def clean_file():
     os.remove("cnf_directory/known_case.cnf")
 
-def exec_gophersat(filename: str, cmd: str = "./gophersat", encoding: str = "utf8") -> Tuple[bool, List[int]]:
+def exec_gophersat(filename: str, cmd: str = "./gophersat.exe", encoding: str = "utf8") -> Tuple[bool, List[int]]:
     result = subprocess.run(
         [cmd, filename], capture_output=True, check=True, encoding=encoding
     )
@@ -194,7 +205,20 @@ def at_most_number(variables,number):
     return clauses
 #-----------------------------FONCTIONS SUR LES CONTRAINTES--------------------------------------------
 
+class SATEngine:
+    def __init__(self):
+        self.solver = Glucose3()
+        self.nb_vars = 0
 
+    def add_clause(self, clause):
+        self.solver.add_clause(clause)
+
+    def solve(self, assumptions=None):
+        return self.solver.solve(assumptions=assumptions)
+
+    def model(self):
+        return self.solver.get_model()
+    
 #-----------------------------Class Map--------------------------------------------
 class Map():
     def __init__(self, m : int, n : int, nb_gardes : int, nb_civils : int) -> None:
@@ -234,6 +258,8 @@ class Map():
         self.nb_var_prop = self.nb_lignes * self.nb_colonnes * self.nb_variables
 
         self.grille_scores = np.zeros((self.nb_lignes,self.nb_colonnes))
+
+        self.sat = SATEngine()
 
         self.init_var_Map()
     
@@ -309,6 +335,7 @@ class Map():
         for c1 in clauses : 
             for c2 in c1:
                 self.clauses_personnes.append(c2)
+                # self.sat.add_clause(c2)
         
         clauses = []
 
@@ -329,7 +356,6 @@ class Map():
         for c1 in clauses : 
             for c2 in c1:
                 self.clauses_connues.append(c2)
-
 
     def var_mur(self, pos : Position) -> List:
         return [self.cell_to_variable(pos[1],pos[0],self.mur)]
@@ -406,89 +432,63 @@ class Map():
         return False
 
 
-    def case_mur(self,ligne:int,colonne:int) -> bool:
-        clauses = self.clauses_connues.copy()
-        clauses.append(self.var_mur((colonne,ligne)))
-        dimacs = clauses_to_dimacs(clauses,self.nb_var_prop)
-        write_dimacs_file(dimacs,"cnf_directory/known_case.cnf")
-        result_m = exec_gophersat("cnf_directory/known_case.cnf")[0]
+    def case_mur(self, ligne:int, colonne:int) -> bool:
+        v = self.var_mur((colonne, ligne))[0]
 
-        clauses = self.clauses_connues.copy()
-        clauses.append(self.var_not_mur((colonne,ligne)))
-        dimacs = clauses_to_dimacs(clauses,self.nb_var_prop)
-        write_dimacs_file(dimacs,"cnf_directory/known_case.cnf")
-        result_non_m = exec_gophersat("cnf_directory/known_case.cnf")[0]
+        result_m = self.sat.solve(assumptions=[v])
+        result_non_m = self.sat.solve(assumptions=[-v])
 
-        if result_m == True and result_non_m == False : 
+        if result_m and not result_non_m:
             return True
-        else : 
-            return False
-        
-    def case_personne(self,ligne:int,colonne:int) -> bool:
-        clauses = self.clauses_personnes.copy()
-        clauses.append(self.var_personne((colonne,ligne)))
-        dimacs = clauses_to_dimacs(clauses,self.nb_var_prop)
-        write_dimacs_file(dimacs,"cnf_directory/person_case.cnf")
-        result_p = exec_gophersat("cnf_directory/person_case.cnf")[0]
+        return False
+            
+    def case_personne(self, ligne:int, colonne:int) -> bool:
+        v = self.var_personne((colonne, ligne))[0]
 
-        clauses = self.clauses_personnes.copy()
-        clauses.append(self.var_not_personne((colonne,ligne)))
-        dimacs = clauses_to_dimacs(clauses,self.nb_var_prop)
-        write_dimacs_file(dimacs,"cnf_directory/person_case.cnf")
-        result_non_p = exec_gophersat("cnf_directory/person_case.cnf")[0]
-        if result_p == True and result_non_p == False : 
-            return True
-        else : 
-            return False
+        result_p = self.sat.solve(assumptions=[v])
+        result_non_p = self.sat.solve(assumptions=[-v])
+
+        return result_p and not result_non_p
     
-    def case_maybe_personne(self,ligne:int,colonne:int) -> bool:
-        clauses = self.clauses_personnes.copy() 
-        clauses.append(self.var_personne((colonne,ligne)))
-        dimacs = clauses_to_dimacs(clauses,self.nb_var_prop)
-        write_dimacs_file(dimacs,"cnf_directory/person_case.cnf")
-        result_p = exec_gophersat("cnf_directory/person_case.cnf")[0]
+    def case_maybe_personne(self, ligne:int, colonne:int) -> bool:
+        v = self.var_personne((colonne, ligne))[0]
+        return self.sat.solve(assumptions=[v])
 
-        if result_p == True : 
-            return True
-        else : 
-            return False
+    def case_not_safe(self, ligne:int, colonne:int) -> bool:
+        v = self.var_safe((colonne, ligne))[0]
 
-    def case_not_safe(self,ligne:int,colonne:int) -> bool:
-        clauses = self.clauses_safe.copy()
-        clauses.append(self.var_safe((colonne,ligne)))
-        dimacs = clauses_to_dimacs(clauses,self.nb_var_prop)
-        write_dimacs_file(dimacs,"cnf_directory/safe_case.cnf")
-        result_p = exec_gophersat("cnf_directory/safe_case.cnf")[0]
+        result_p = self.sat.solve(assumptions=[v])
+        result_non_p = self.sat.solve(assumptions=[-v])
 
-        clauses = self.clauses_safe.copy()
-        clauses.append(self.var_not_safe((colonne,ligne)))
-        dimacs = clauses_to_dimacs(clauses,self.nb_var_prop)
-        write_dimacs_file(dimacs,"cnf_directory/safe_case.cnf")
-        result_non_p = exec_gophersat("cnf_directory/safe_case.cnf")[0]
+        return (not result_p) and result_non_p
 
-        if result_p == False and result_non_p == True : 
-            return True
-        else : 
-            return False
+    def case_go(self, ligne:int, colonne:int) -> bool:
+        v = self.var_pass_case((colonne, ligne))[0]
 
-    def case_go(self,ligne:int,colonne:int) -> bool:
-        clauses = self.clauses_passage.copy()
-        clauses.append(self.var_pass_case((colonne,ligne)))
-        dimacs = clauses_to_dimacs(clauses,self.nb_var_prop)
-        write_dimacs_file(dimacs,"cnf_directory/pass_case.cnf")
-        result_p = exec_gophersat("cnf_directory/pass_case.cnf")[0]
+        result_p = self.sat.solve(assumptions=[v])
+        result_non_p = self.sat.solve(assumptions=[-v])
 
-        clauses = self.clauses_passage.copy()
-        clauses.append(self.var_not_pass_case((colonne,ligne)))
-        dimacs = clauses_to_dimacs(clauses,self.nb_var_prop)
-        write_dimacs_file(dimacs,"cnf_directory/pass_case.cnf")
-        result_non_p = exec_gophersat("cnf_directory/pass_case.cnf")[0]
+        return result_p and not result_non_p
 
-        if result_p == True and result_non_p == False : 
-            return True
-        else : 
-            return False
 
+    # def known_Map(self) -> bool:
+    #     clauses = self.clauses_connues.copy()
+    #     for i in range(self.nb_lignes):
+    #         for j in range(self.nb_colonnes):
+    #             clauses.append(self.var_not_safe((j,i)))
+    #             clauses.append(self.var_not_personne((j,i)))
+    #             clauses.append(self.var_not_pass_case((j,i)))
+    #     dimacs = clauses_to_dimacs(clauses,self.nb_var_prop)
+    #     write_dimacs_file(dimacs,"cnf_directory/Map_modele.cnf")
+    #     modele = exec_gophersat("cnf_directory/Map_modele.cnf")[1]
+        
+    #     dictionnaire = {}
+    #     for it in range(len(modele)) :
+    #         if modele[it] > 0 : 
+    #             ligne, colonne, num_objet = self.variable_to_cell(modele[it])
+    #             objet = self.num_to_obj_HC(num_objet)
+    #             dictionnaire[(colonne,ligne)] = objet
+    #     return dictionnaire
 
     def known_Map(self) -> bool:
         clauses = self.clauses_connues.copy()
@@ -497,9 +497,16 @@ class Map():
                 clauses.append(self.var_not_safe((j,i)))
                 clauses.append(self.var_not_personne((j,i)))
                 clauses.append(self.var_not_pass_case((j,i)))
-        dimacs = clauses_to_dimacs(clauses,self.nb_var_prop)
-        write_dimacs_file(dimacs,"cnf_directory/Map_modele.cnf")
-        modele = exec_gophersat("cnf_directory/Map_modele.cnf")[1]
+
+        solver = Glucose3()
+
+        for clause in clauses:
+            solver.add_clause(clause)
+
+        if not solver.solve():
+            return {}
+        
+        modele = solver.get_model()
         
         dictionnaire = {}
         for it in range(len(modele)) :

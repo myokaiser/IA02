@@ -3,6 +3,7 @@ from hitman.hitman import HC, HitmanReferee
 from pprint import pprint
 from typing import List, Tuple, Dict
 import time
+import heapq
 
 Grid = List[List[int]] 
 PropositionnalVariable = int
@@ -183,10 +184,10 @@ def boucle(target: Tuple, etat: Dict, goal: str, carte: Dict, way: bool = False,
         return etat
     priority = []# liste des noeuds à visiter en priorité
     visited = set()# liste des noeuds visiter
-    priority = [(heuristique(position, target), position, [])]
+    heapq.heappush(priority, (heuristique(position, target), position, []))
     while priority:
         priority.sort() # Tri de la liste selon les priorités
-        _, current_pos, path = priority.pop(0)# Récupération du nœud avec la plus basse priorité
+        _, current_pos, path = heapq.heappop(priority)# Récupération du nœud avec la plus basse priorité
         if current_pos == target:# Hitman a atteint la cible
             path = [etat["position"]] + path
             for i in range(len(path)-1):
@@ -195,10 +196,16 @@ def boucle(target: Tuple, etat: Dict, goal: str, carte: Dict, way: bool = False,
                     print("PARCOURS :", path)
                     print("ACTION JOUE :", fonction)
                     print("OBJECTIF :", goal)
-                    etat = eval(fonction)
+                    actions = {
+                        "hr.move()": hr.move,
+                        "hr.turn_clockwise()": hr.turn_clockwise,
+                        "hr.turn_anti_clockwise()": hr.turn_anti_clockwise,
+                        "hr.neutralize_guard()": hr.neutralize_guard,
+                    }
+                    etat = actions[fonction]()
                     carte = matrix_to_dico(hr._HitmanReferee__world)
                     display_map(carte, etat)
-                    time.sleep(0.5) #TODO timer = 2s
+                    # time.sleep(0.5) #TODO timer = 2s
             if goal == 'weapon' :
                 etat = hr.take_weapon()
                 if etat['has_weapon'] == True and etat['has_suit'] == False :
@@ -238,8 +245,10 @@ def boucle(target: Tuple, etat: Dict, goal: str, carte: Dict, way: bool = False,
             new_pos = (new_x, new_y)
             if est_position_valide(current_pos, new_pos, carte, way, neutra) and new_pos not in visited: # on vérifie que le déplacement est valide (pas de mur, de garde, etc) et qu'il n'appartient pas déjà à visited
                 new_path = path + [new_pos]
-                priority.append((heuristique(new_pos, target) + len(new_path), new_pos, new_path))
-                priority.sort()
+                heapq.heappush(
+                    priority,
+                    (heuristique(new_pos, target) + len(new_path), new_pos, new_path)
+                )
     if target not in path :
         if goal == "corde" :
             print("pas de chemin vers la corde, on essaye avec le suit")
