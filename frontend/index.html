@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hitman Game</title>
+
+    <style>
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(7, 25px);
+        }
+
+        .cell {
+            width: 25px;
+            height: 25px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: monospace;
+            background: #000;
+            color: white;
+        }
+
+        .wall { background: #444; }
+        .player { background: green; }
+        .target { background: red; }
+        .guard { background: blue; }
+        .civil { background: purple; }
+        .suit { background: yellow; }
+        .piano { background: orange; }
+    </style>
+</head>
+
+<body>
+
+<h1>Hitman</h1>
+<div id="grid"></div>
+
+<script>
+
+let gameLoop;
+
+async function update() {
+    const res = await fetch("/state");
+    const data = await res.json();
+
+    const map = data.map;
+    const pos = data.position;
+
+    const grid = document.getElementById("grid");
+    grid.innerHTML = "";
+
+    const maxX = 6;
+    const maxY = 5;
+
+    for (let y = maxY; y >= 0; y--) {
+        for (let x = 0; x <= maxX; x++) {
+
+            const div = document.createElement("div");
+            div.classList.add("cell");
+
+            if (pos[0] === `${x}` && pos[3] === `${y}`) {
+                div.textContent = "H";
+                div.classList.add("player");
+            } else {
+                const key = `${x},${y}`;
+                const val = map[key];
+
+                if (val === "WALL") {
+                    div.textContent = "#";
+                    div.classList.add("wall");
+                } else if (val === "TARGET") {
+                    div.textContent = "T";
+                    div.classList.add("target");
+                } else if (val === "SUIT") {
+                    div.textContent = "S";
+                    div.classList.add("suit");
+                } else if (val === "PIANO_WIRE") {
+                    div.textContent = "P";
+                    div.classList.add("piano");
+                } else if (val && val.includes("GUARD")) {
+                    div.textContent = "G";
+                    div.classList.add("guard");
+                } else if (val && val.includes("CIVIL")) {
+                    div.textContent = "C";
+                    div.classList.add("civil");
+                } else {
+                    div.textContent = " ";
+                }
+            }
+
+            grid.appendChild(div);
+        }
+    }
+
+    if (data.done) {
+        clearInterval(gameLoop);
+        alert("Phase 1 terminée !");
+    }
+}
+
+gameLoop = setInterval(update, 1000);
+
+</script>
+
+</body>
+</html>
