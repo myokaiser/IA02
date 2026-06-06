@@ -48,6 +48,90 @@ def remove(string: str) -> Dict:
     dico = eval(string)
     return dico
 
+def render_map_html(map: dict, state: dict) -> str:
+    symbols = {
+        HC.EMPTY: " ",
+        HC.SUIT: "S",
+        HC.GUARD_N: "G",
+        HC.GUARD_W: "G",
+        HC.GUARD_E: "G",
+        HC.GUARD_S: "G",
+        HC.WALL: "#",
+        HC.TARGET: "T",
+        HC.CIVIL_N: "C",
+        HC.CIVIL_W: "C",
+        HC.CIVIL_E: "C",
+        HC.CIVIL_S: "C",
+        HC.PIANO_WIRE: "P",
+        HC.N: "^",
+        HC.S: "v",
+        HC.E: ">",
+        HC.W: "<"
+    }
+
+    max_x = max(x for x, _ in map.keys())
+    max_y = max(y for _, y in map.keys())
+
+    html = """
+    <style>
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(%d, 28px);
+            gap: 2px;
+            background: #111;
+            padding: 10px;
+            border-radius: 10px;
+            width: fit-content;
+        }
+
+        .cell {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: monospace;
+            font-weight: bold;
+            border-radius: 4px;
+            background: #1e1e1e;
+            color: white;
+        }
+
+        .wall { background: #444; }
+        .target { background: #b33; }
+        .player { background: #2a7; color: black; }
+        .guard { background: #a82; }
+    </style>
+
+    <div class="grid">
+    """ % (max_x + 1)
+
+    for y in range(max_y, -1, -1):
+        for x in range(max_x + 1):
+
+            if (x, y) == state["position"]:
+                symbol = symbols[state["orientation"]]
+                css_class = "cell player"
+
+            else:
+                element = map.get((x, y), HC.EMPTY)
+                symbol = symbols.get(element, "?")
+
+                css_class = "cell"
+
+                if element == HC.WALL:
+                    css_class += " wall"
+                elif element == HC.TARGET:
+                    css_class += " target"
+                elif "GUARD" in str(element):
+                    css_class += " guard"
+
+            html += f'<div class="{css_class}">{symbol}</div>'
+
+    html += "</div>"
+
+    return html
+
 def display_map_phase1(map: Dict, position: str, iteration: str, score: str, nb_co:str, state: Dict) -> None:
     symbols = {
         HC.EMPTY: " ",

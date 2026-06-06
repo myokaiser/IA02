@@ -1,7 +1,6 @@
 from map import affiche_star_2, affiche_star_1
 from phase1 import Phase1
-from phase2 import matrix_to_dico, trouver_corde, boucle
-from hitman.hitman import HitmanReferee, complete_map_example
+from phase2 import Phase2
 
 def main():
     affiche_star_1()
@@ -9,12 +8,10 @@ def main():
     map_str = phase1.phase1()
     print("map_str", map_str)
     map_str = str(map_str)
+
     affiche_star_2()
-    hr = HitmanReferee()
-    state = hr.start_phase2()
-    map = matrix_to_dico(hr._HitmanReferee__world)
-    corde = trouver_corde(map)
-    state = boucle(corde, state, 'weapon', map)
+    phase2 = Phase2()
+    phase2.phase2()
 
 if __name__ == "__main__":
     main()
