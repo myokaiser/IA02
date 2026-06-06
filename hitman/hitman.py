@@ -95,7 +95,6 @@ world_example = [
     [HC.WALL,   HC.WALL,    HC.EMPTY,   HC.GUARD_E, HC.EMPTY,   HC.CIVIL_W,     HC.CIVIL_E],
     [HC.EMPTY,  HC.EMPTY,   HC.EMPTY,   HC.EMPTY,   HC.EMPTY,   HC.EMPTY,       HC.EMPTY],
     [HC.EMPTY,  HC.EMPTY,   HC.WALL,    HC.WALL,    HC.EMPTY,   HC.PIANO_WIRE,  HC.EMPTY],
-    
 ]
 
 complete_map_example = {
@@ -149,8 +148,8 @@ class HitmanReferee:
         self.__filename = filename
         if filename == "":
             self.__world = world_example # utilisation de la map en liste de liste
-            self.__m = len(self.__world) # longueur de la map
-            self.__n = len(self.__world[0]) # largueur de la map
+            self.__m = len(world_example) # longueur de la map
+            self.__n = len(world_example[0]) # largueur de la map
         else:
             raise NotImplementedError("TODO")
 
@@ -293,12 +292,13 @@ class HitmanReferee:
         return vision
 
     def move(self): #TODO mouvement
+        current_phase = self.__phase
         offset_x, offset_y = self.__get_offset()
         x, y = self.__pos
 
-        if self.__phase == 1:
+        if current_phase == 1:
             self.__phase1_penalties += 1
-        elif self.__phase == 2:
+        elif current_phase == 2:
             self.__phase2_penalties += 1
         else:
             raise ValueError("Err: invalid phase")
@@ -342,12 +342,12 @@ class HitmanReferee:
             return self.__get_status_phase_2()
 
     def turn_clockwise(self):
-        if self.__phase == 1:
-            self.__phase1_penalties += 1
-            self.__phase1_penalties += 5 * self.__seen_by_guard_num()
-        elif self.__phase == 2:
-            self.__phase2_penalties += 1
-            self.__phase2_penalties += (
+        current_orientation = self.__orientation
+        current_phase = self.__phase
+        if current_phase == 1:
+            self.__phase1_penalties += 1 + 5 * self.__seen_by_guard_num()
+        elif current_phase == 2:
+            self.__phase2_penalties += 1 + (
                 0 if self.__suit_on else 5 * self.__seen_by_guard_num()
             )
         else:
@@ -355,28 +355,28 @@ class HitmanReferee:
 
         self.__add_history("Turn Clockwise")
 
-        if self.__orientation == HC.N:
+        if current_orientation == HC.N:
             self.__orientation = HC.E
-        elif self.__orientation == HC.E:
+        elif current_orientation == HC.E:
             self.__orientation = HC.S
-        elif self.__orientation == HC.S:
+        elif current_orientation == HC.S:
             self.__orientation = HC.W
-        elif self.__orientation == HC.W:
+        elif current_orientation == HC.W:
             self.__orientation = HC.N
 
         return (
             self.__get_status_phase_1()
-            if self.__phase == 1
+            if current_phase == 1
             else self.__get_status_phase_2()
         )
 
     def turn_anti_clockwise(self):
-        if self.__phase == 1:
-            self.__phase1_penalties += 1
-            self.__phase1_penalties += 5 * self.__seen_by_guard_num()
-        elif self.__phase == 2:
-            self.__phase2_penalties += 1
-            self.__phase2_penalties += (
+        current_orientation = self.__orientation
+        current_phase = self.__phase
+        if current_phase == 1:
+            self.__phase1_penalties += 1 + 5 * self.__seen_by_guard_num()
+        elif current_phase == 2:
+            self.__phase2_penalties += 1 + (
                 0 if self.__suit_on else 5 * self.__seen_by_guard_num()
             )
         else:
@@ -384,17 +384,17 @@ class HitmanReferee:
 
         self.__add_history("Turn Anti-Clockwise")
 
-        if self.__orientation == HC.N:
+        if current_orientation == HC.N:
             self.__orientation = HC.W
-        elif self.__orientation == HC.E:
+        elif current_orientation == HC.E:
             self.__orientation = HC.N
-        elif self.__orientation == HC.S:
+        elif current_orientation == HC.S:
             self.__orientation = HC.E
-        elif self.__orientation == HC.W:
+        elif current_orientation == HC.W:
             self.__orientation = HC.S
         return (
             self.__get_status_phase_1()
-            if self.__phase == 1
+            if current_phase == 1
             else self.__get_status_phase_2()
         )
 
@@ -438,8 +438,7 @@ class HitmanReferee:
             raise ValueError("Err: invalid phase")
 
         self.__add_history("Kill Target")
-        self.__phase2_penalties += 1
-        self.__phase2_penalties += (
+        self.__phase2_penalties += 1 + (
             0 if self.__suit_on else 5 * self.__seen_by_guard_num()
         )
         x, y = self.__pos
@@ -459,8 +458,7 @@ class HitmanReferee:
             raise ValueError("Err: invalid phase")
 
         self.__add_history("Neutralize Guard")
-        self.__phase2_penalties += 1
-        self.__phase2_penalties += 5 * self.__seen_by_guard_num()
+        self.__phase2_penalties += 1 + 5 * self.__seen_by_guard_num()
 
         offset_x, offset_y = self.__get_offset()
         x, y = self.__pos
@@ -475,10 +473,9 @@ class HitmanReferee:
         ]:
             return self.__get_status_phase_2("Err: invalid move")
 
-        self.__phase2_penalties += 20
         self.__update_world_content(x + offset_x, y + offset_y, HC.EMPTY)
         self.__guard_count -= 1
-        self.__phase2_penalties += 100 * (
+        self.__phase2_penalties += 20 + 100 * (
             self.__seen_by_guard_num() + self.__seen_by_civil_num()
         )
 
@@ -489,8 +486,7 @@ class HitmanReferee:
             raise ValueError("Err: invalid phase")
 
         self.__add_history("Neutralize Civil")
-        self.__phase2_penalties += 1
-        self.__phase2_penalties += 5 * self.__seen_by_guard_num()
+        self.__phase2_penalties += 1 + 5 * self.__seen_by_guard_num()
 
         offset_x, offset_y = self.__get_offset()
         x, y = self.__pos
@@ -504,10 +500,9 @@ class HitmanReferee:
         ]:
             return self.__get_status_phase_2("Err: invalid move")
 
-        self.__phase2_penalties += 20
         self.__update_world_content(x + offset_x, y + offset_y, HC.EMPTY)
         self.__civil_count -= 1
-        self.__phase2_penalties += 100 * (
+        self.__phase2_penalties += 20 + 100 * (
             self.__seen_by_guard_num() + self.__seen_by_civil_num()
         )
 
@@ -518,8 +513,7 @@ class HitmanReferee:
             raise ValueError("Err: invalid phase")
 
         self.__add_history("Take Suit")
-        self.__phase2_penalties += 1
-        self.__phase2_penalties += 5 * self.__seen_by_guard_num()
+        self.__phase2_penalties += 1 + 5 * self.__seen_by_guard_num()
 
         x, y = self.__pos
         if self.__get_world_content(x, y) != HC.SUIT:
@@ -535,8 +529,7 @@ class HitmanReferee:
             raise ValueError("Err: invalid phase")
 
         self.__add_history("Take Weapon")
-        self.__phase2_penalties += 1
-        self.__phase2_penalties += 5 * self.__seen_by_guard_num()
+        self.__phase2_penalties += 1 + 5 * self.__seen_by_guard_num()
         x, y = self.__pos
         if self.__get_world_content(x, y) != HC.PIANO_WIRE:
             return self.__get_status_phase_2("Err: invalid move")
@@ -551,8 +544,7 @@ class HitmanReferee:
             raise ValueError("Err: invalid phase")
 
         self.__add_history("Put on Suit")
-        self.__phase2_penalties += 1
-        self.__phase2_penalties += 5 * self.__seen_by_guard_num()
+        self.__phase2_penalties += 1 + 5 * self.__seen_by_guard_num()
 
         if not self.__has_suit:
             return self.__get_status_phase_2("Err: invalid move")
@@ -570,47 +562,41 @@ class HitmanReferee:
         return ASCII_ART
 
     def __compute_civil_count(self) -> int:
-        count = 0
-        for l in self.__world:
-            for c in l:
-                if (
-                    c == HC.CIVIL_N
-                    or c == HC.CIVIL_E
-                    or c == HC.CIVIL_S
-                    or c == HC.CIVIL_W
-                ):
-                    count += 1
+        civils = {HC.CIVIL_N, HC.CIVIL_E, HC.CIVIL_S, HC.CIVIL_W}
+        count = sum(
+            1 for row in self.__world for cell in row if cell in civils
+        )
         return count
 
     def __compute_guard_count(self) -> int:
-        count = 0
-        for l in self.__world:
-            for c in l:
-                if (
-                    c == HC.GUARD_N
-                    or c == HC.GUARD_E
-                    or c == HC.GUARD_S
-                    or c == HC.GUARD_W
-                ):
-                    count += 1
+        guards = {HC.GUARD_N, HC.GUARD_E, HC.GUARD_S, HC.GUARD_W}
+        count = sum(
+            1 for row in self.__world for cell in row if cell in guards
+        )
         return count
 
     def __compute_civils(
         self,
     ) -> Dict[Tuple[int, int], List[Tuple[Tuple[int, int], HC]]]:
+        world = self.__world
+        m = self.__m
+        get_civil_vision = self.__get_civil_vision
+
+        civils = (
+            HC.CIVIL_N,
+            HC.CIVIL_E,
+            HC.CIVIL_S,
+            HC.CIVIL_W,
+        )
+
         locations = {}
-        for l_index, l in enumerate(self.__world):
-            for c_index, c in enumerate(l):
-                if (
-                    c == HC.CIVIL_N
-                    or c == HC.CIVIL_E
-                    or c == HC.CIVIL_S
-                    or c == HC.CIVIL_W
-                ):
-                    civil_x, civil_y = (c_index, self.__m - l_index - 1)
-                    locations[(civil_x, civil_y)] = self.__get_civil_vision(
-                        civil_x, civil_y
-                    )
+
+        for row_idx, row in enumerate(world):
+            y = m - row_idx - 1
+            for col_idx, cell in enumerate(row):
+                if cell in civils:
+                    locations[(col_idx, y)] = get_civil_vision(col_idx, y)
+
         return locations
 
     def __get_civil_offset(self, civil):
@@ -737,9 +723,10 @@ class HitmanReferee:
         return count
 
     def __add_history(self, action):
-        if self.__phase == 1:
+        current_phase = self.__phase
+        if current_phase == 1:
             self.__phase1_history.append(action)
-        elif self.__phase == 2:
+        elif current_phase == 2:
             self.__phase2_history.append(action)
         else:
             raise ValueError("Err: invalid phase")
