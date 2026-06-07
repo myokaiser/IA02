@@ -1,6 +1,7 @@
 from map import Map,unique,at_most_number, display_map_phase1
 from hitman.hitman import HitmanReferee, HC
 from typing import List, Dict, Tuple
+import time
 
 Grid = List[List[int]] 
 PropositionnalVariable = int
@@ -46,7 +47,7 @@ class Phase1():
             elif element == HC.GUARD_E or element == HC.GUARD_N or element == HC.GUARD_S or element == HC.GUARD_W:
                 is_a_personne = True
                 cases_vu = self.map.case_guard_vis(coord_case[0],coord_case[1],element)
-                print("vision du garde ("+str(coord_case[0])+","+str(coord_case[1])+") : "+str(cases_vu))
+                # print("vision du garde ("+str(coord_case[0])+","+str(coord_case[1])+") : "+str(cases_vu))
                 for case in cases_vu : 
                     clause_safe = self.map.var_not_safe((case[1],case[0]))
                     self.map.add_safe_clause(clause_safe)
@@ -64,7 +65,7 @@ class Phase1():
                 is_a_personne = True
                 clause_personne = self.map.var_personne(coord_case)
                 cases_vu = self.map.case_civil_vis(coord_case[0],coord_case[1],element)
-                print("vision du garde (" + str(coord_case[0]) + "," + str(coord_case[1]) + ") : " + str(cases_vu))
+                # print("vision du garde (" + str(coord_case[0]) + "," + str(coord_case[1]) + ") : " + str(cases_vu))
                 for case in cases_vu : 
                     clause_safe = self.map.var_not_safe((case[0],case[1]))
                     self.map.add_safe_clause(clause_safe)
@@ -87,8 +88,8 @@ class Phase1():
             self.map.sat.add_clause(clause_personne)
             self.map.add_known_clause(clause)
             self.map.sat.add_clause(clause)
-            print(str(element)+ " en ("+ str(coord_case[0]) + ", "+str(coord_case[1]) + ")", end="|")
-        print()
+            # print(str(element)+ " en ("+ str(coord_case[0]) + ", "+str(coord_case[1]) + ")", end="|")
+        # print()
             
             
         return nb_cases_visible
@@ -156,15 +157,15 @@ class Phase1():
                         nb_pos[id] += 1
                     
                 id += 1
-        print("cases not safe : " + str(unsafe))
+        # print("cases not safe : " + str(unsafe))
         if len(safe) == -1 : 
             return unsafe[0]
         else : 
-            print("cases safe : " + str(safe))
+            # print("cases safe : " + str(safe))
             max = scores[0]
             case_suivante = safe[0]
             for num in range(id) : 
-                print(str(safe[num])+" | score de la case : " + str(scores[num])+" | nb d'incertitude :"+str(nb_pos[num]))
+                # print(str(safe[num])+" | score de la case : " + str(scores[num])+" | nb d'incertitude :"+str(nb_pos[num]))
                 if scores[num] > max : 
                     max = scores[num]
                     case_suivante = safe[num]
@@ -177,8 +178,8 @@ class Phase1():
         dictionnaire =  self.map.known_Map()
         self.hitman.send_content(dictionnaire)
         _, score, _ , true_map = self.hitman.end_phase1()
-        print(score)
-        print(true_map)
+        # print(score)
+        # print(true_map)
         return dictionnaire
 
     def set_orientation_case_suiv(self,ligne:int, colonne:int, position: str, iteration: str, score: str, nb_co:str) -> None:
@@ -218,7 +219,7 @@ class Phase1():
             elif colonne == pos[0] + 1:
                 self.hitman.turn_clockwise()  
                 self.hitman.turn_clockwise()   
-
+        time.sleep(1)
         self.affichage_jeu_phase1(position, iteration, score, nb_co)
     
 
@@ -244,6 +245,7 @@ class Phase1():
                 for i in range(3):
                     score = "Score vision : "+str(i+1)
                     self.informations_actuelles = self.hitman.turn_anti_clockwise()
+                    time.sleep(1)
                     self.affichage_jeu_phase1(position, iteration, score, nb_co)
                     self.vision()
             
@@ -255,7 +257,7 @@ class Phase1():
                     cases_possible_deplacement.append(case)
             
             if len(cases_possible_deplacement) >= 1 : 
-                print("case more safe", cases_possible_deplacement)
+                # print("case more safe", cases_possible_deplacement)
                 case_suivante = self.case_more_safe(cases_possible_deplacement)
             else : 
                 case_suivante = cases_possible_deplacement[0]
@@ -266,10 +268,11 @@ class Phase1():
 
             self.set_orientation_case_suiv(case_suivante[0],case_suivante[1], position, iteration, score, nb_co)
             self.informations_actuelles = self.hitman.move()
+            time.sleep(1)
             self.affichage_jeu_phase1(position, iteration, score, nb_co)
-
+            
             it += 1
-            print("Parcours : "+str(phase1))
+            # print("Parcours : "+str(phase1))
             # nb_cases_trouvees = self.map.nb_known_case()
             # print("Nb cases connues : "+str(nb_cases_trouvees))
             if nb_cases_trouvees >= self.map.nb_cases_a_trouver:

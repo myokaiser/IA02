@@ -18,12 +18,10 @@ def state():
     global phase1_end
     if not phase1_end :
         step = game_phase1.step()
-        print("STEP", step)
         phase1_end = step["done"]
         return jsonify(game_phase1.step())
     else :
         step = game_phase2.step()
-        print("STEP", step)
         return jsonify(game_phase2.step())
 
 @app.route("/")
