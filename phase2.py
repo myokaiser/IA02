@@ -1,4 +1,4 @@
-from map import display_map
+from map import display_map_phase2
 from hitman.hitman import HC, HitmanReferee
 from pprint import pprint
 from typing import List, Tuple, Dict
@@ -206,8 +206,9 @@ class Phase2():
                         }
                         etat = actions[fonction]()
                         carte = self.matrix_to_dico(self.hitman._HitmanReferee__world)
-                        display_map(carte, etat)
-                        # time.sleep(0.5) #TODO timer = 2s
+                        print("CARTE", carte, etat["position"])
+                        display_map_phase2(carte, etat)
+                        time.sleep(0.5) #TODO timer = 2s
                 if goal == 'weapon' :
                     etat = self.hitman.take_weapon()
                     if etat['has_weapon'] == True and etat['has_suit'] == False :

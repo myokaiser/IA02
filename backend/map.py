@@ -187,7 +187,7 @@ def display_map_phase1(map: Dict, position: str, iteration: str, score: str, nb_
         print("+-----" * (max_x + 1) + "+")
 
 
-def display_map(map: Dict, state: Dict) -> None:
+def display_map_phase2(map: Dict, state: Dict) -> None:
     symbols = {
         HC.EMPTY: " ",
         HC.SUIT: "S",
