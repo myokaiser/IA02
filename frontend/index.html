@@ -92,9 +92,9 @@ async function update() {
         }
     }
 
-    if (data.done) {
+    if (data.done && data.phase === 2) {
         clearInterval(gameLoop);
-        alert("Phase 1 terminée !");
+        alert("Jeu terminée !");
     }
 }
 
