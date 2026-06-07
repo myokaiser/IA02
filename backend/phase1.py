@@ -24,6 +24,8 @@ class Phase1():
             self.state["guard_count"], 
             self.state["civil_count"]
             )
+        self.is_blocked = False
+        self.retry = 0
         self.delay = 0.3
         self.last_update = time.time()
         self.done = False
@@ -189,38 +191,54 @@ class Phase1():
         if orientation == HC.N :
             if ligne == pos[1] - 1 :
                 self.hitman.turn_clockwise()
+                self.affichage_jeu_phase1(position, iteration, score, nb_co)
                 self.hitman.turn_clockwise()
+                self.affichage_jeu_phase1(position, iteration, score, nb_co)
             elif colonne == pos[0] - 1 :
                 self.hitman.turn_anti_clockwise()
+                self.affichage_jeu_phase1(position, iteration, score, nb_co)
             elif colonne == pos[0] + 1 :
                 self.hitman.turn_clockwise()
+                self.affichage_jeu_phase1(position, iteration, score, nb_co)
+
         elif orientation == HC.E :
             if ligne == pos[1] - 1 :
                 self.hitman.turn_clockwise()
+                self.affichage_jeu_phase1(position, iteration, score, nb_co)
             elif ligne == pos[1] + 1 :
                 self.hitman.turn_anti_clockwise()
+                self.affichage_jeu_phase1(position, iteration, score, nb_co)
             elif colonne == pos[0] - 1 :
-                self.hitman.turn_clockwise()   
-                self.hitman.turn_clockwise()    
+                self.hitman.turn_clockwise()
+                self.affichage_jeu_phase1(position, iteration, score, nb_co) 
+                self.hitman.turn_clockwise()
+                self.affichage_jeu_phase1(position, iteration, score, nb_co)  
         
         elif orientation == HC.S :
             if ligne == pos[1] + 1 :
                 self.hitman.turn_clockwise()
+                self.affichage_jeu_phase1(position, iteration, score, nb_co)
                 self.hitman.turn_clockwise()
+                self.affichage_jeu_phase1(position, iteration, score, nb_co)
             elif colonne == pos[0] - 1 :
                 self.hitman.turn_clockwise()
+                self.affichage_jeu_phase1(position, iteration, score, nb_co)
             elif colonne == pos[0] + 1 :
-                self.hitman.turn_anti_clockwise()  
+                self.hitman.turn_anti_clockwise()
+                self.affichage_jeu_phase1(position, iteration, score, nb_co)
         
         elif orientation == HC.W :
             if ligne == pos[1] + 1 :
                 self.hitman.turn_clockwise()
+                self.affichage_jeu_phase1(position, iteration, score, nb_co)
             elif ligne == pos[1] - 1 :
                 self.hitman.turn_anti_clockwise()
+                self.affichage_jeu_phase1(position, iteration, score, nb_co)
             elif colonne == pos[0] + 1 :
-                self.hitman.turn_clockwise()  
-                self.hitman.turn_clockwise()   
-        self.affichage_jeu_phase1(position, iteration, score, nb_co)
+                self.hitman.turn_clockwise()
+                self.affichage_jeu_phase1(position, iteration, score, nb_co)
+                self.hitman.turn_clockwise()
+                self.affichage_jeu_phase1(position, iteration, score, nb_co)
 
     def convert_cell(self, v: object) -> str :
         return v.name if hasattr(v, "name") else str(v)
@@ -314,6 +332,9 @@ class Phase1():
                 self.state = self.hitman.turn_anti_clockwise()
                 self.affichage_jeu_phase1(position, iteration, score, nb_co)
                 self.vision()
+
+                if self.map.case_go(self.state['position'][1], self.state['position'][0]) :
+                    break
 
         move_case = self.map.move_case(self.state['position'][1], self.state['position'][0])
 
