@@ -298,6 +298,7 @@ class Phase2() :
             "hr.turn_anti_clockwise()" : self.hitman.turn_anti_clockwise,
             "hr.neutralize_guard()" : self.hitman.neutralize_guard,
         }
+        print(f"action jouée : {action}")
         self.state = actions[action]()
         self.carte = self.matrix_to_dico(self.hitman._HitmanReferee__world)
 

@@ -132,9 +132,9 @@ class Phase1():
                     pass
 
     def affichage_jeu_phase1(self, position: str, iteration: str, score: str, nb_co:str) -> None :
-        print("KNOWN", self.map.known_Map())
-        print("POSITION", position)
-        print("STATE", self.state)
+        # print("KNOWN", self.map.known_Map())
+        # print("POSITION", position)
+        # print("STATE", self.state)
         display_map_phase1(self.map.known_Map(), position, iteration, score, nb_co, self.state)
 
     def case_more_safe(self, cases: list) -> Tuple :
@@ -220,7 +220,6 @@ class Phase1():
             elif colonne == pos[0] + 1 :
                 self.hitman.turn_clockwise()  
                 self.hitman.turn_clockwise()   
-
         self.affichage_jeu_phase1(position, iteration, score, nb_co)
 
     def convert_cell(self, v: object) -> str :
@@ -333,19 +332,11 @@ class Phase1():
         self.map.add_pass_clause(clause_passage)
         self.map.sat.add_clause(clause_passage)
 
-        self.set_orientation_case_suiv(
-            case_suivante[0],
-            case_suivante[1],
-            position,
-            iteration,
-            score,
-            nb_co
-        )
+        self.set_orientation_case_suiv(case_suivante[0], case_suivante[1], position, iteration, score, nb_co)
+        self.state = self.hitman.move()
+        self.affichage_jeu_phase1(position, iteration, score, nb_co)
 
         self.last_update = now
-
-        self.state = self.hitman.move()
-
         self.it += 1
 
         return self.get_state(iteration, score, nb_co)
