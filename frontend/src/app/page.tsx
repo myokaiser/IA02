@@ -5,8 +5,11 @@ import Controls from "@/src/components/Controls";
 import Reset from "@/src/components/Reset";
 import { useGame } from "@/src/hooks/useGame";
 
+import { useState } from "react";
+
 export default function Page() {
   const { state, running, start, reset } = useGame();
+  const isFinished = state && state.done && state.phase === 2;
 
   if (!state) {
     return (
@@ -18,8 +21,10 @@ export default function Page() {
 
   return (
     <div className="p-6 flex flex-col gap-4 bg-black min-h-screen text-white">
+      {!isFinished ? 
       <Controls running={running} onStart={start} />
-      <Reset running={running} onStart={reset} />
+      :
+      <Reset running={running} onStart={reset} />}
 
       {!running && (
         <div className="text-xs text-zinc-400">
@@ -39,7 +44,7 @@ export default function Page() {
         Iteration: {state.iteration}
       </div> */}
 
-      {state.done && state.phase === 2 && (
+      {isFinished && (
         <div className="text-red-400 font-bold">
           Simulation finished
         </div>

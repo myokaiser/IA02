@@ -39,7 +39,6 @@ export function useGame() {
     if (!running) return;
 
     const interval = setInterval(async () => {
-      await stepGame();
       const newState = await fetchState();
       setState(newState);
 
