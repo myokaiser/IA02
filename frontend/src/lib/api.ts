@@ -1,4 +1,4 @@
-const API = process.env.URL_API;
+const API = process.env.NEXT_PUBLIC_API;
 
 export async function startGame() {
   return fetch(`${API}/start`, { method: "POST" });
