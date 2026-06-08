@@ -285,6 +285,9 @@ class Phase1():
         elif action == "turn_anti_clockwise" :
             self.state = self.hitman.turn_anti_clockwise()
 
+    def reset(self) -> Dict :
+        return self.get_state(iteration = "0", score = "0", nb_co = "0")
+
     def step(self) -> Dict :
 
         print("action", self.action)
