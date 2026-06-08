@@ -2,6 +2,7 @@ from map import Map,unique,at_most_number, display_map_phase1
 from hitman.hitman import HitmanReferee, HC
 from typing import List, Dict, Tuple
 import time
+import copy
 
 Grid = List[List[int]] 
 PropositionnalVariable = int
@@ -254,7 +255,7 @@ class Phase1():
 
     def get_state(self, iteration, score, nb_co) -> Dict :
         return {
-            "map" : self.convert_map(self.map.known_Map()),
+            "map" : self.convert_map(self.unknown_Map()),
             "position" : self.convert_cell(self.state["position"])[1:5],
             "orientation" : self.convert_cell(self.state["orientation"]),
             "nb_co" : nb_co,
@@ -285,8 +286,28 @@ class Phase1():
         elif action == "turn_anti_clockwise" :
             self.state = self.hitman.turn_anti_clockwise()
 
-    def reset(self) -> Dict :
-        return self.get_state(iteration = "0", score = "0", nb_co = "0")
+    def unknown_Map(self) -> Dict :
+        known = copy.deepcopy(self.map.known_Map())
+        path = set(self.phase1_list) 
+        result = {}
+
+        for x in range(self.map.nb_colonnes) :
+            for y in range(self.map.nb_lignes) :
+
+                pos = (x, y)
+                value = known[pos]
+
+                if pos in path :
+                    result[pos] = value
+                    continue
+
+                if value != HC.EMPTY :
+                    result[pos] = value
+                    continue
+
+                result[pos] = HC.UNKNOWN
+
+        return result
 
     def step(self) -> Dict :
 
@@ -303,10 +324,10 @@ class Phase1():
             self.done = True
 
         # stockage position
-        self.phase1_list.append([
+        self.phase1_list.append((
             self.state['position'][0],
             self.state['position'][1]
-        ])
+        ))
 
         nb_co = f"Nb cases connues : {nb_cases_trouvees}"
         position = f"position : ({self.state['position'][0]} , {self.state['position'][1]})"
