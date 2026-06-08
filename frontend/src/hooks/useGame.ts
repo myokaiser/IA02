@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchState, stepGame, startGame, resetGame } from "@/src/lib/api";
+import {
+  fetchState,
+  startGame,
+  resetGame,
+  sendAction,
+} from "@/src/lib/api";
 
 export function useGame() {
     type Data = {
@@ -13,11 +18,12 @@ export function useGame() {
     }
   const [state, setState] = useState<Data | null>(null);
   const [running, setRunning] = useState(false);
+  const [mode, setMode] = useState<"ai" | "manual">("ai");
 
   // 1. LOAD INITIAL STATE ONLY ONCE
   useEffect(() => {
-    fetchState().then(setState);
-  }, []);
+    fetchState(mode).then(setState);
+  }, [mode]);
 
   // 2. START SIMULATION
   const start = async () => {
@@ -25,30 +31,75 @@ export function useGame() {
     setRunning(true);
   };
 
-    const reset = async () => {
+  const reset = async () => {
     setRunning(false);
 
     await resetGame();
 
-    const newState = await fetchState();
+    const newState = await fetchState(mode);
     setState(newState);
-    };
+  };
+
+  const move = async () => {
+    await sendAction("move");
+
+    const state = await fetchState(mode);
+    setState(state);
+  };
+
+  const turnLeft = async () => {
+    await sendAction("left");
+
+    const state = await fetchState(mode);
+    setState(state);
+  };
+
+  const turnRight = async () => {
+    await sendAction("right");
+
+    const state = await fetchState(mode);
+    setState(state);
+  };
+
+  const kill = async () => {
+    await sendAction("kill");
+
+    const state = await fetchState(mode);
+    setState(state);
+  };
 
   // 3. LOOP ONLY WHEN RUNNING
   useEffect(() => {
-    if (!running) return;
+  if (!running) return;
 
-    const interval = setInterval(async () => {
-      const newState = await fetchState();
-      setState(newState);
+  if (mode !== "ai") return;
 
-      if (newState.done && newState.phase === 2) {
-        setRunning(false);
-      }
+  const interval = setInterval(async () => {
+
+    const newState = await fetchState(mode);
+    setState(newState);
+
+    if (newState.done && newState.phase === 2) {
+      setRunning(false);
+    }
     }, 400);
 
     return () => clearInterval(interval);
-  }, [running]);
+  }, [running, mode]);
 
-  return { state, running, start, reset };
+  return {
+    state,
+
+    running,
+    start,
+    reset,
+
+    mode,
+    setMode,
+
+    move,
+    turnLeft,
+    turnRight,
+    kill,
+  };
 }
