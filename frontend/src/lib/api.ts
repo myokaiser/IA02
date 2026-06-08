@@ -1,4 +1,4 @@
-const API = "http://localhost:5000";
+const API = process.env.URL_API;
 
 export async function startGame() {
   return fetch(`${API}/start`, { method: "POST" });
