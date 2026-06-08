@@ -15,6 +15,7 @@ function getColor(value?: string) {
   if (value === "PIANO_WIRE") return "bg-orange-500";
   if (value.includes("GUARD")) return "bg-blue-500";
   if (value.includes("CIVIL")) return "bg-purple-500";
+  if (value === "UNKNOWN") return "bg-zinc-950";
   return "bg-zinc-900";
 }
 
@@ -62,7 +63,7 @@ export default function Cell({
         </span>
       ) : value ? (
         <span className="text-white/80">
-          {value[0]}
+          {value === "UNKNOWN" ? "?" : value[0]}
         </span>
       ) : null}
     </div>
