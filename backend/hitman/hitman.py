@@ -9,6 +9,7 @@ __status__ = "dev"
 from enum import Enum
 from itertools import product
 from typing import List, Tuple, Dict
+import copy
 import sys
 
 print(f"Hitman Referee v{__version__}", file=sys.stderr)
@@ -148,7 +149,7 @@ class HitmanReferee:
     def __init__(self, filename: str = ""):
         self.__filename = filename
         if filename == "":
-            self.__world = world_example # utilisation de la map en liste de liste
+            self.__world = copy.deepcopy(world_example) # utilisation de la map en liste de liste
             self.__m = len(world_example) # longueur de la map
             self.__n = len(world_example[0]) # largueur de la map
         else:
