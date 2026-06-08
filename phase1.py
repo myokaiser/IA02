@@ -2,6 +2,7 @@ from map import Map,unique,at_most_number, display_map_phase1
 from hitman.hitman import HitmanReferee, HC
 from typing import List, Dict, Tuple
 import time
+import copy
 
 Grid = List[List[int]] 
 PropositionnalVariable = int
@@ -134,7 +135,7 @@ class Phase1():
                     pass
 
     def affichage_jeu_phase1(self, position: str, iteration: str, score: str, nb_co:str) -> None:
-        display_map_phase1(self.map.known_Map(), position, iteration, score, nb_co, self.informations_actuelles)
+        display_map_phase1(self.unknown_Map(), position, iteration, score, nb_co, self.informations_actuelles)
 
     def case_more_safe(self,cases: list) -> Tuple:
         unsafe = []
@@ -221,15 +222,38 @@ class Phase1():
                 self.hitman.turn_clockwise()   
         time.sleep(1)
         self.affichage_jeu_phase1(position, iteration, score, nb_co)
-    
+
+    def unknown_Map(self) -> Dict :
+        known = copy.deepcopy(self.map.known_Map())
+        path = set(self.phase1_list) 
+        result = {}
+
+        for x in range(self.map.nb_colonnes) :
+            for y in range(self.map.nb_lignes) :
+
+                pos = (x, y)
+                value = known[pos]
+
+                if pos in path :
+                    result[pos] = value
+                    continue
+
+                if value != HC.EMPTY :
+                    result[pos] = value
+                    continue
+
+                # 3. sinon flou
+                result[pos] = HC.UNKNOWN
+
+        return result
 
     def phase1(self) -> Dict:
         self.map.clauses_connues.append(self.map.var_rien((self.informations_actuelles['position'][0],self.informations_actuelles['position'][1])))
         it=0
-        phase1 = []
+        self.phase1_list = []
         nb_cases = self.map.nb_colonnes * self.map.nb_lignes
         while(it < 2 * nb_cases):
-            phase1.append([self.informations_actuelles['position'][0],self.informations_actuelles['position'][1]])
+            self.phase1_list.append((self.informations_actuelles['position'][0],self.informations_actuelles['position'][1]))
             nb_cases_trouvees = self.map.nb_known_case()
 
             nb_co = "Nb cases connues : " + str(nb_cases_trouvees)
@@ -272,7 +296,7 @@ class Phase1():
             self.affichage_jeu_phase1(position, iteration, score, nb_co)
             
             it += 1
-            # print("Parcours : "+str(phase1))
+            print("Parcours : "+str(self.phase1_list))
             # nb_cases_trouvees = self.map.nb_known_case()
             # print("Nb cases connues : "+str(nb_cases_trouvees))
             if nb_cases_trouvees >= self.map.nb_cases_a_trouver:
