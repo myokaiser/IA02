@@ -24,9 +24,7 @@ class Phase1():
             self.state["guard_count"], 
             self.state["civil_count"]
             )
-        self.is_blocked = False
-        self.retry = 0
-        self.delay = 0.3
+        self.delay = 0.1
         self.last_update = time.time()
         self.done = False
 
@@ -190,55 +188,39 @@ class Phase1():
         pos = self.state['position']
         if orientation == HC.N :
             if ligne == pos[1] - 1 :
-                self.hitman.turn_clockwise()
-                self.affichage_jeu_phase1(position, iteration, score, nb_co)
-                self.hitman.turn_clockwise()
-                self.affichage_jeu_phase1(position, iteration, score, nb_co)
+                self.rotate_action.append("turn_clockwise")
+                self.rotate_action.append("turn_clockwise")
             elif colonne == pos[0] - 1 :
-                self.hitman.turn_anti_clockwise()
-                self.affichage_jeu_phase1(position, iteration, score, nb_co)
+                self.rotate_action.append("turn_anti_clockwise")
             elif colonne == pos[0] + 1 :
-                self.hitman.turn_clockwise()
-                self.affichage_jeu_phase1(position, iteration, score, nb_co)
+                self.rotate_action.append("turn_clockwise")
 
         elif orientation == HC.E :
             if ligne == pos[1] - 1 :
-                self.hitman.turn_clockwise()
-                self.affichage_jeu_phase1(position, iteration, score, nb_co)
+                self.rotate_action.append("turn_clockwise")
             elif ligne == pos[1] + 1 :
-                self.hitman.turn_anti_clockwise()
-                self.affichage_jeu_phase1(position, iteration, score, nb_co)
+                self.rotate_action.append("turn_anti_clockwise")
             elif colonne == pos[0] - 1 :
-                self.hitman.turn_clockwise()
-                self.affichage_jeu_phase1(position, iteration, score, nb_co) 
-                self.hitman.turn_clockwise()
-                self.affichage_jeu_phase1(position, iteration, score, nb_co)  
+                self.rotate_action.append("turn_clockwise")
+                self.rotate_action.append("turn_clockwise") 
         
         elif orientation == HC.S :
             if ligne == pos[1] + 1 :
-                self.hitman.turn_clockwise()
-                self.affichage_jeu_phase1(position, iteration, score, nb_co)
-                self.hitman.turn_clockwise()
-                self.affichage_jeu_phase1(position, iteration, score, nb_co)
+                self.rotate_action.append("turn_clockwise")
+                self.rotate_action.append("turn_clockwise")
             elif colonne == pos[0] - 1 :
-                self.hitman.turn_clockwise()
-                self.affichage_jeu_phase1(position, iteration, score, nb_co)
+                self.rotate_action.append("turn_clockwise")
             elif colonne == pos[0] + 1 :
-                self.hitman.turn_anti_clockwise()
-                self.affichage_jeu_phase1(position, iteration, score, nb_co)
+                self.rotate_action.append("turn_anti_clockwise")
         
         elif orientation == HC.W :
             if ligne == pos[1] + 1 :
-                self.hitman.turn_clockwise()
-                self.affichage_jeu_phase1(position, iteration, score, nb_co)
+                self.rotate_action.append("turn_clockwise")
             elif ligne == pos[1] - 1 :
-                self.hitman.turn_anti_clockwise()
-                self.affichage_jeu_phase1(position, iteration, score, nb_co)
+                self.rotate_action.append("turn_anti_clockwise")
             elif colonne == pos[0] + 1 :
-                self.hitman.turn_clockwise()
-                self.affichage_jeu_phase1(position, iteration, score, nb_co)
-                self.hitman.turn_clockwise()
-                self.affichage_jeu_phase1(position, iteration, score, nb_co)
+                self.rotate_action.append("turn_clockwise")
+                self.rotate_action.append("turn_clockwise")
 
     def convert_cell(self, v: object) -> str :
         return v.name if hasattr(v, "name") else str(v)
@@ -286,6 +268,9 @@ class Phase1():
         self.it = 0
         self.nb_cases = self.map.nb_colonnes * self.map.nb_lignes
         self.phase1_list = []
+        self.action = "blocage"
+        self.rotate_action = []
+        self.action_done = False
 
         self.map.clauses_connues.append(
             self.map.var_rien((
@@ -294,7 +279,15 @@ class Phase1():
             ))
         )
 
+    def execute_action(self, action: str) -> None :
+        if action == "turn_clockwise" :
+            self.state = self.hitman.turn_clockwise()
+        elif action == "turn_anti_clockwise" :
+            self.state = self.hitman.turn_anti_clockwise()
+
     def step(self) -> Dict :
+
+        print("action", self.action)
 
         now = time.time()
         nb_cases_trouvees = self.map.nb_known_case()
@@ -319,45 +312,82 @@ class Phase1():
 
         if now - self.last_update < self.delay :
             return self.get_state(iteration, score, nb_co)
+        
+        if self.action == 'blocage' and not self.action_done :
+            #========================================================
+            # blocage decision        
+            self.vision()
+            self.hear()
 
-        self.vision()
-        self.hear()
+            self.map.set_grille_score(self.state['position'][1], self.state['position'][0], -6)
+            
+            if not self.map.case_go(self.state['position'][1], self.state['position'][0]) :
+                self.action_done = True
+                for i in range(3) :
+                    score = f"Score vision : {i+1}"
+                    self.state = self.hitman.turn_anti_clockwise()
+                    self.affichage_jeu_phase1(position, iteration, score, nb_co)
+                    self.vision()
 
-        self.map.set_grille_score(self.state['position'][1], self.state['position'][0], -6)
+                    if self.map.case_go(self.state['position'][1], self.state['position'][0]) :
+                        break
+            else :
+                self.action_done = False
 
-        # rotation si blocage
-        if not self.map.case_go(self.state['position'][1], self.state['position'][0]) :
-            for i in range(3) :
-                score = f"Score vision : {i+1}"
-                self.state = self.hitman.turn_anti_clockwise()
-                self.affichage_jeu_phase1(position, iteration, score, nb_co)
-                self.vision()
+            self.action = 'rotate_choice'
+            #========================================================
 
-                if self.map.case_go(self.state['position'][1], self.state['position'][0]) :
-                    break
+        if self.action == 'rotate_choice' and not self.action_done :
+            #========================================================
+            # rotate decision
+            move_case = self.map.move_case(self.state['position'][1], self.state['position'][0])
+            cases_possible_deplacement = []
+            for case in move_case :
+                if not self.map.case_mur(case[0], case[1]) and not self.map.case_personne(case[0], case[1]) :
+                    cases_possible_deplacement.append(case)
 
-        move_case = self.map.move_case(self.state['position'][1], self.state['position'][0])
+            if len(cases_possible_deplacement) >= 1 :
+                case_suivante = self.case_more_safe(cases_possible_deplacement)
+            else :
+                case_suivante = cases_possible_deplacement[0]
 
-        cases_possible_deplacement = []
-        for case in move_case :
-            if not self.map.case_mur(case[0], case[1]) and not self.map.case_personne(case[0], case[1]) :
-                cases_possible_deplacement.append(case)
+            self.set_orientation_case_suiv(case_suivante[0], case_suivante[1], position, iteration, score, nb_co)
+            if self.rotate_action != [] :
+                self.action_done = True
+                rotate = self.rotate_action.pop(0)
+                self.execute_action(rotate)
+            else :
+                self.action_done = False
 
-        if len(cases_possible_deplacement) >= 1 :
-            case_suivante = self.case_more_safe(cases_possible_deplacement)
-        else :
-            case_suivante = cases_possible_deplacement[0]
+            self.action = 'rotate'
+            #========================================================
 
-        clause_passage = self.map.var_pass_case((self.state['position'][0], self.state['position'][1]))
+        if self.action == 'rotate' and not self.action_done :
+            if self.rotate_action != [] :
+                self.action_done = True
+                rotate = self.rotate_action.pop(0)
+                self.execute_action(rotate)
+                self.action = 'rotate'
+            else :
+                self.action_done = False
+                clause_passage = self.map.var_pass_case((self.state['position'][0], self.state['position'][1]))
+                self.map.add_pass_clause(clause_passage)
+                self.map.sat.add_clause(clause_passage)
+                self.action = 'move'
 
-        self.map.add_pass_clause(clause_passage)
-        self.map.sat.add_clause(clause_passage)
 
-        self.set_orientation_case_suiv(case_suivante[0], case_suivante[1], position, iteration, score, nb_co)
-        self.state = self.hitman.move()
-        self.affichage_jeu_phase1(position, iteration, score, nb_co)
+        if self.action == 'move' and not self.action_done :
+            #========================================================
+            # move decision
+            self.action_done = True
+            self.state = self.hitman.move()
+            self.affichage_jeu_phase1(position, iteration, score, nb_co)
+            self.action = 'blocage'
+            self.it += 1
+            #========================================================
 
+        print("Nouvelle action :", self.action)
+        self.action_done = False
         self.last_update = now
-        self.it += 1
 
         return self.get_state(iteration, score, nb_co)
