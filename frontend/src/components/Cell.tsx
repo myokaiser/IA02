@@ -1,19 +1,20 @@
+import { GRID_SIZES, GridSize } from "@/src/lib/gridConfig";
+
 type Props = {
   value?: string;
   isPlayer: boolean;
   orientation: string;
+  size?: GridSize;
 };
 
 function getColor(value?: string) {
   if (!value) return "bg-zinc-900";
-
   if (value === "WALL") return "bg-zinc-600";
   if (value === "TARGET") return "bg-red-500";
   if (value === "SUIT") return "bg-yellow-400";
   if (value === "PIANO_WIRE") return "bg-orange-500";
   if (value.includes("GUARD")) return "bg-blue-500";
   if (value.includes("CIVIL")) return "bg-purple-500";
-
   return "bg-zinc-900";
 }
 
@@ -32,18 +33,28 @@ function getPlayerArrow(orientation: string) {
   }
 }
 
-export default function Cell({ value, isPlayer, orientation }: Props) {
+export default function Cell({
+  value,
+  isPlayer,
+  orientation,
+  size = 3,
+}: Props) {
+  const config = GRID_SIZES[size];
+
   return (
     <div
       className={`
-        w-6 h-6
         flex items-center justify-center
-        text-[10px] font-mono
         transition-all duration-150
         border border-zinc-800
         ${getColor(value)}
-        ${isPlayer ? "ring-2 ring-green-400 z-10 scale-110" : ""}
+        ${isPlayer ? "ring-2 ring-green-400 z-10" : ""}
       `}
+      style={{
+        width: config.cell,
+        height: config.cell,
+        fontSize: config.font,
+      }}
     >
       {isPlayer ? (
         <span className="text-white font-bold">
