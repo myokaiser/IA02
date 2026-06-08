@@ -3,6 +3,7 @@ from hitman.hitman import HC, HitmanReferee
 from pprint import pprint
 from typing import List, Tuple, Dict
 import heapq
+import time
 
 Grid = List[List[int]] 
 PropositionnalVariable = int
@@ -17,6 +18,8 @@ class Phase2() :
     def __init__(self) -> None :
         self.hitman = HitmanReferee()
         self.state = self.hitman.start_phase2()
+        self.delay = 0.1
+        self.last_update = time.time()
 
     def trouver_corde(self, carte: Dict) -> Tuple | None :
         for cle, valeur in carte.items() :
@@ -315,7 +318,11 @@ class Phase2() :
 
     def step(self) -> Dict :
 
+        now = time.time()
         if self.done :
+            return self.get_state()
+        
+        if now - self.last_update < self.delay :
             return self.get_state()
 
         # Plus d'actions à jouer ?
@@ -330,6 +337,7 @@ class Phase2() :
         action = self.actions.pop(0)
 
         self.execute_action(action)
+        self.last_update = now
 
         return self.get_state()
 
