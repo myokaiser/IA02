@@ -45,6 +45,7 @@ async function update() {
 
     const map = data.map;
     const pos = data.position;
+    const orient = data.orientation;
 
     const grid = document.getElementById("grid");
     grid.innerHTML = "";
@@ -59,7 +60,16 @@ async function update() {
             div.classList.add("cell");
 
             if (pos[0] === `${x}` && pos[3] === `${y}`) {
-                div.textContent = "H";
+                if (orient === "N") {
+                    div.textContent = "^";
+                } else if (orient === "S") {
+                    div.textContent = "v";
+                } else if (orient === "W") {
+                    div.textContent = "<";
+                } else if (orient === "E") {
+                    div.textContent = ">";
+                }
+                // div.textContent = "H";
                 div.classList.add("player");
             } else {
                 const key = `${x},${y}`;
