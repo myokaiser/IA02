@@ -86,7 +86,6 @@ class Phase1():
 
     # display map functions
     def affichage_jeu_phase1(self) -> None :
-        # print("KNOWN", self.map.known_Map())
         # print("POSITION", position)
         # print("STATE", self.state)
         display_map_phase1(self.map.known_Map(), self.position, self.iteration, self.score, self.nb_co, self.state)
@@ -169,10 +168,13 @@ class Phase1():
         nb_cases_visible = len(self.state['vision'])
         for i in range(nb_cases_visible) :
             is_a_personne = False
+
+            score_case = 0
             
             coord_case = self.state['vision'][i][0] # extract coord of the case in front of him
             element = self.state['vision'][i][1] # determine the nature of the element (E, G, C) in this case
             if element == HC.WALL :
+                score_case = -100
                 clause = self.map.var_mur(coord_case)
             elif element == HC.EMPTY :
                 clause = self.map.var_rien(coord_case)
@@ -201,7 +203,6 @@ class Phase1():
 
             elif element == HC.CIVIL_E or element == HC.CIVIL_N or element == HC.CIVIL_S or element == HC.CIVIL_W :
                 is_a_personne = True
-                clause_personne = self.map.var_personne(coord_case)
                 cases_vues = self.case_civil_vis(coord_case[0], coord_case[1], element)
                 print(f"vision du civil ({coord_case[0]},{coord_case[1]}) : {cases_vues}")
                 for case in cases_vues : 
@@ -219,8 +220,12 @@ class Phase1():
 
             if is_a_personne == False :
                 clause_personne = self.map.var_not_personne(coord_case)
+                if self.map.get_grille_score(coord_case) >= 0 :
+                    self.map.set_grille_score(coord_case, score_case)
             else :
+                score_case = -15
                 clause_personne = self.map.var_personne(coord_case)
+                self.map.set_grille_score(coord_case, score_case)
             # self.map.add_person_clause(clause_personne)
             self.map.sat.add_clause(clause_personne)
             self.map.add_known_clause(clause)
@@ -257,15 +262,6 @@ class Phase1():
 
             for clause in clauses:
                 self.map.sat.add_clause(clause)
-                    
-            # if nb_personne_entendue == 5 :
-            #     if self.map.nb_gardes + self.map.nb_civils <= 5 :
-            #         clauses = at_most_number(variables_personnes, nb_personne_entendue)
-            #         for clause in clauses : 
-            #             self.map.add_person_prob_clause(clause)
-                        
-            #     else:
-            #         pass
 
     def case_more_safe(self, cases: list) -> Tuple :
         unsafe = []
@@ -279,7 +275,7 @@ class Phase1():
                 unsafe.append(case)
             else : 
                 case_safe = self.map.case_safe(case[0], case[1])
-                scores.append(self.map.get_grille_score(case[0], case[1]))
+                scores.append(self.map.get_grille_score(case))
                 safe.append(case)
                 nb_pos.append(0)
                 for case_safety in case_safe :  
@@ -390,12 +386,14 @@ class Phase1():
         
         if self.action == 'blocage' and not self.action_done :
             #========================================================
-            # blocage decision        
+            # blocage decision
             self.vision()
             self.hear()
 
-            self.map.set_grille_score(self.state['position'][1], self.state['position'][0], -6)
-            
+            self.map.set_grille_score(self.state['position'], -10) # score des cases déjà visitées
+            self.map.update_grille_score_with_known_map()
+            self.map.update_grille_score_with_frontier(self.state['position'])
+            print(self.map.grille_scores)
             if not self.map.case_go(self.state['position'][1], self.state['position'][0]) :
                 self.action_done = True
                 for i in range(3) :
