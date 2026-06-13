@@ -221,6 +221,10 @@ class SATEngine:
     def add_clause(self, clause):
         self.solver.add_clause(clause)
 
+        if not self.solver.solve():
+            print("CLAUSE FATALE :", clause)
+            raise Exception("SAT devenu UNSAT")
+
     def solve(self, assumptions=None):
         return self.solver.solve(assumptions=assumptions)
 
@@ -429,8 +433,8 @@ class Map():
                 return True
         return False
 
-    def case_mur(self, ligne: int, colonne: int) -> bool :
-        v = self.var_mur((colonne, ligne))[0]
+    def case_mur(self, pos: Position) -> bool :
+        v = self.var_mur(pos)[0]
 
         result_m = self.sat.solve(assumptions = [v])
         result_non_m = self.sat.solve(assumptions = [-v])
