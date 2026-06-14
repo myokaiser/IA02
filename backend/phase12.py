@@ -196,6 +196,7 @@ class Phase1():
                 for case in cases_vues : 
                     clause_safe = self.map.var_not_safe(case)
                     self.map.sat.add_clause(clause_safe)
+                    self.map.set_grille_score(case, -5)
                 if element == HC.GUARD_E : 
                     clause = self.map.var_guard_e(coord_case)
                 elif element == HC.GUARD_N : 
@@ -212,7 +213,7 @@ class Phase1():
                 for case in cases_vues : 
                     clause_safe = self.map.var_not_safe(case)
                     self.map.sat.add_clause(clause_safe)
-
+                    self.map.set_grille_score(case, -5)
                 if element == HC.CIVIL_E : 
                     clause = self.map.var_civil_e(coord_case)
                 elif element == HC.CIVIL_N : 
@@ -231,7 +232,7 @@ class Phase1():
                 clause_personne = self.map.var_personne(coord_case) #TODO temp remove
                 self.map.set_grille_score(coord_case, score_case)
             # self.map.add_person_clause(clause_personne)
-            self.map.sat.add_clause(clause_personne) #TODO temp remove
+            # self.map.sat.add_clause(clause_personne) #TODO temp remove
             self.map.add_known_clause(clause)
             self.map.sat.add_clause(clause)
             print(f"{element} en ({coord_case[0]}, {coord_case[1]})", end="|")
@@ -244,18 +245,26 @@ class Phase1():
         # print("nb", nb_personne_entendue)
         
         coord_cases = self.map.hear_case(self.state['position']) # coordonnées des cases dans le périmètre d'écoute d'hitman
-        # print("coord hear", coord_cases)
+        print("coord hear", coord_cases)
         
         variables_personnes = []
         for coord in coord_cases :
-            if nb_personne_entendue == 0 : # aucune personne dans le périmètre
-                clause = self.map.var_not_personne((coord[1], coord[0])) #TODO à changer et mettre uniquement coord
-                # self.map.add_person_clause(clause) # ne sert pas
-                self.map.sat.add_clause(clause)
-            else :
-                clause = self.map.var_personne((coord[1], coord[0]))
-                if self.map.known_case(coord[0], coord[1]) == False : # si la personne n'est pas connu de la carte
-                    variables_personnes.append(clause[0]) # extrait de la valeur de laclause hors de sa liste
+
+            gn = self.map.var_guard_n((coord[1], coord[0]))[0]
+            gs = self.map.var_guard_s((coord[1], coord[0]))[0]
+            ge = self.map.var_guard_e((coord[1], coord[0]))[0]
+            gw = self.map.var_guard_w((coord[1], coord[0]))[0]
+
+            cn = self.map.var_civil_n((coord[1], coord[0]))[0]
+            cs = self.map.var_civil_s((coord[1], coord[0]))[0]
+            ce = self.map.var_civil_e((coord[1], coord[0]))[0]
+            cw = self.map.var_civil_w((coord[1], coord[0]))[0]
+
+            liste_person = [gn, gs, ge, gw, cn, cs, ce, cw]
+
+            if self.map.known_case(coord[1], coord[0]) == False : # si la personne n'est pas connu de la carte
+                for v in liste_person :
+                    variables_personnes.append(v) # extrait de la valeur de laclause hors de sa liste
 
         if variables_personnes != [] :
             clauses = exactly_number(
@@ -348,6 +357,7 @@ class Phase1():
             return False
 
         if self.map.case_personne(y, x):
+            # print(f"personne en {x},{y}")
             return False
 
         return True
@@ -537,6 +547,11 @@ class Phase1():
 
         if self.map.case_personne(y, x):
             return False
+        
+        if len(self.current_path) > 0 : # if target can be defined, no need to go on it
+            current_target = self.current_path[-1]
+            if self.map.get_grille_score(current_target) != 20 :
+                return False
 
         return True
 
