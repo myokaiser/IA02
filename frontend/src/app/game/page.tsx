@@ -84,9 +84,14 @@ return (
         map={state.map}
         position={state.position}
         orientation={state.orientation}
+        nb_lignes={state.nb_lignes}
+        nb_colonnes={state.nb_colonnes}
+        known={state.known}
         size={4}
       />
     </div>
+
+    played : {state.action}
 
     {/* STATUS */}
     {isFinished && (

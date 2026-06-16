@@ -4,6 +4,7 @@ type Props = {
   value?: string;
   isPlayer: boolean;
   orientation: string;
+  is_known: boolean;
   size?: GridSize;
 };
 
@@ -38,6 +39,7 @@ export default function Cell({
   value,
   isPlayer,
   orientation,
+  is_known,
   size = 3,
 }: Props) {
   const config = GRID_SIZES[size];
@@ -62,7 +64,7 @@ export default function Cell({
           {getPlayerArrow(orientation)}
         </span>
       ) : value ? (
-        <span className="text-white/80">
+        <span className={`${ is_known ? "text-white" : "text-zinc-500"}`}>
           {value === "UNKNOWN" ? "?" : value[0]}
         </span>
       ) : null}

@@ -75,7 +75,8 @@ class Phase1():
             "orientation" : self.convert_cell(self.state["orientation"]),
             "done" : self.done,
             "phase" : self.state["phase"],
-            "action" : self.current_action
+            "action" : self.current_action,
+            "known" : self.map.cases_connues
         }
 
     # display map functions

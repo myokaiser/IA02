@@ -1,6 +1,6 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
-from phase1 import Phase1
+from phase12 import Phase1
 from phase2 import Phase2
 
 
@@ -19,17 +19,40 @@ phase1_end = False
 def state_ai():
     global phase1_end
     if not phase1_end :
-        step = game_phase1.step()
-        phase1_end = step["done"]
-        return jsonify(step)
+        state = game_phase1.get_state()
+        phase1_end = state["done"]
+        return jsonify(state)
     else :
-        step = game_phase2.step()
-        return jsonify(step)
+        state = game_phase2.get_state()
+        return jsonify(state)
+    
+@app.post("/step")
+def step():
+    global game_phase1, phase1_end
+
+    if not phase1_end:
+        result = game_phase1.step()
+        phase1_end = result["done"]
+        return jsonify(result)
+
+    return jsonify(game_phase2.step())
+
+# @app.route("/state/ai")
+# def state_ai():
+
+#     state = game_phase2.get_state()
+#     return jsonify(state)
+    
+# @app.post("/step")
+# def step():
+#     global game_phase1, phase1_end
+
+#     return jsonify(game_phase2.step())
 
 @app.route("/state/manual")
 def state_manual():
     global game_phase1
-    return jsonify(game_phase1.get_state("0", "0", "0"))
+    return jsonify(game_phase1.get_state())
 
 @app.post("/reset")
 def reset():
@@ -43,7 +66,7 @@ def reset():
 
     phase1_end = False
 
-    return jsonify(game_phase1.get_state("0", "0", "0"))
+    return jsonify(game_phase1.get_state())
 
 @app.post("/action/<action>")
 def action(action):
@@ -52,20 +75,26 @@ def action(action):
 
     if action == "move":
         state = game_phase1.hitman.move()
+        game_phase1.current_action = 'move'
         game_phase1.vision()
         game_phase1.hear()
 
     elif action == "left":
         state = game_phase1.hitman.turn_anti_clockwise()
+        game_phase1.current_action = 'turn_anti_clockwise'
 
     elif action == "right":
         state = game_phase1.hitman.turn_clockwise()
+        game_phase1.current_action = 'turn_clockwise'
 
     elif action == "kill":
         state = game_phase1.hitman.kill_target()
+        game_phase1.current_action = 'kill'
 
     else:
         return jsonify({"error": "unknown action"}), 400
+    
+    game_phase1.phase1_list.append((state['position'][0], state['position'][1]))
 
     game_phase1.state = state
 

@@ -22,17 +22,19 @@ export function useKeyboard({
       e: KeyboardEvent
     ) => {
 
+      console.log("key", e.key.toLowerCase())
+
       switch (e.key.toLowerCase()) {
 
-        case "w":
+        case " ":
           await move();
           break;
 
-        case "q":
+        case "arrowleft":
           await left();
           break;
 
-        case "d":
+        case "arrowright":
           await right();
           break;
 

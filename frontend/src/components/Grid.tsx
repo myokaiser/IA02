@@ -5,19 +5,25 @@ type Props = {
   map: Record<string, string>;
   position: string;
   orientation: string;
+  nb_lignes: number;
+  nb_colonnes: number;
+  known: string[];
   size: GridSize;
 };
-
-const MAX_X = 6;
-const MAX_Y = 5;
 
 export default function Grid({
   map,
   position,
   orientation,
+  nb_lignes,
+  nb_colonnes,
+  known,
   size = 3,
 }: Props) {
   const config = GRID_SIZES[size] ;
+
+  const MAX_X = nb_colonnes - 1;
+  const MAX_Y = nb_lignes - 1;
 
   const cells = [];
 
@@ -25,6 +31,7 @@ export default function Grid({
     for (let x = 0; x <= MAX_X; x++) {
       const key = `${x},${y}`;
       const value = map?.[key];
+      const is_known = known.includes(key);
 
       const isPlayer =
         position[0] === `${x}` && position[3] === `${y}`;
@@ -35,6 +42,7 @@ export default function Grid({
           value={value}
           isPlayer={isPlayer}
           orientation={orientation}
+          is_known={is_known}
           size={size}
         />
       );

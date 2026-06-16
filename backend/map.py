@@ -144,6 +144,17 @@ def display_map_phase2(map: Dict, state: Dict) -> None:
         print()
         print("+-----" * (max_x + 1) + "+")
 
+def all_cases_certaines(nb_lignes, nb_colonnes) -> List :
+
+    which = []
+
+    for y in range(nb_lignes) :
+        for x in range(nb_colonnes) :
+
+            which.append(f"{x},{y}")
+
+    return which
+
 #-----------------------------AFFICHAGE MAP------------------------------------------------
 
 #-----------------------------FONCTIONS SUR LES CONTRAINTES--------------------------------------------
@@ -203,7 +214,7 @@ class Map():
         self.nb_colonnes = n
         self.nb_cases_a_trouver = int(n*m*0.95)
 
-        self.clauses_connues = []
+        self.cases_connues = []
         self.nb_variables = 13
         self.rien = 0
         self.mur = 1
@@ -551,7 +562,7 @@ class Map():
 
         return False
 
-    def nb_cases_certaines(self, phase = 1) -> List :
+    def nb_cases_certaines(self) -> List :
 
         total = 0
         which = []
@@ -559,17 +570,16 @@ class Map():
         for y in range(self.nb_lignes) :
             for x in range(self.nb_colonnes) :
 
-                if phase == 1 :
-                    if self.case_certaine((x, y)) :
-                        total += 1
-                        which.append(f"{x},{y}")
-                else :
+                if self.case_certaine((x, y)) :
                     total += 1
                     which.append(f"{x},{y}")
+
         return [total, which]
 
     def early_stopping(self) -> bool :
-        nb, _ = self.nb_cases_certaines()
+        nb, known = self.nb_cases_certaines()
+
+        self.cases_connues = known
 
         pourcentage = nb / (self.nb_lignes * self.nb_colonnes)
 

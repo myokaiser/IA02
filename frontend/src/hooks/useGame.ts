@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   fetchState,
   startGame,
+  stepGame,
   resetGame,
   sendAction,
 } from "@/src/lib/api";
@@ -11,10 +12,14 @@ import {
 export function useGame() {
     type Data = {
         map: Record<string, string>,
+        nb_lignes: number,
+        nb_colonnes: number,
         position: string,
         orientation: string,
         done: boolean,
-        phase: number
+        phase: number,
+        action: string,
+        known: string[]
     }
   const [state, setState] = useState<Data | null>(null);
   const [running, setRunning] = useState(false);
@@ -75,7 +80,7 @@ export function useGame() {
   if (mode !== "ai") return;
 
   const interval = setInterval(async () => {
-
+    stepGame()
     const newState = await fetchState(mode);
     setState(newState);
 

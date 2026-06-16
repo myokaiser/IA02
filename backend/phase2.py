@@ -1,4 +1,4 @@
-from map import display_map_phase2
+from map import display_map_phase2, all_cases_certaines
 from hitman.hitman import HC, HitmanReferee
 from pprint import pprint
 from typing import List, Tuple, Dict
@@ -37,6 +37,7 @@ class Phase2() :
 
         # file d'actions à jouer
         self.actions = []
+        self.known = all_cases_certaines(self.state["m"], self.state["n"])
 
     def end_phase_2(self) -> Dict :
         return self.hitman.end_phase2()
@@ -52,7 +53,6 @@ class Phase2() :
         }
 
     def get_state(self) -> Dict :
-        # _, known_cases = self.map.nb_cases_certaines(phase = 2)
         return {
             "map" : self.convert_map(self.carte),
             "nb_lignes" : max(y for _, y in self.carte.keys()) + 1,
@@ -62,7 +62,7 @@ class Phase2() :
             "done" : self.done,
             "phase" : self.state["phase"],
             "action" : self.current_action,
-            "known" : []
+            "known" : self.known
         }
 
     # display map functions
