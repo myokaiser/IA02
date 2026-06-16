@@ -26,31 +26,22 @@ class Phase1():
             self.state["guard_count"], 
             self.state["civil_count"]
             )
-        self.delay = 0.1
+        self.delay = 0.3
         self.last_update = time.time()
         self.done = False
 
     def init_phase1(self) -> None :
-        self.it = 0
         self.nb_cases = self.map.nb_colonnes * self.map.nb_lignes
         self.phase1_list = [(
             self.state['position'][0], 
             self.state['position'][1]
             )]
-        self.action = "blocage"
-        self.rotate_action = []
-        self.action_done = False
         self.current_action = ""
-        self.nb_co = ""
-        self.iteration = ""
-        self.position = ""
-        self.score = ""
-        self.map.clauses_connues.append(
-            self.map.var_rien((
-                self.state['position'][0],
-                self.state['position'][1]
-            ))
+
+        self.map.sat.add_clause(
+            self.map.var_rien(self.state['position'])
         )
+
         self.map.set_grille_score(self.state['position'], -20)
 
         # file d'actions à jouer
@@ -82,9 +73,6 @@ class Phase1():
             "nb_colonnes" : self.map.nb_colonnes,
             "position" : self.convert_cell(self.state["position"])[1:5],
             "orientation" : self.convert_cell(self.state["orientation"]),
-            "nb_co" : self.nb_co,
-            "iteration" : self.iteration,
-            "score" : self.score,
             "done" : self.done,
             "phase" : self.state["phase"],
             "action" : self.current_action
@@ -92,10 +80,11 @@ class Phase1():
 
     # display map functions
     def affichage_jeu_phase1(self) -> None :
-        display_map_phase1(self.map.known_Map(), self.position, self.iteration, self.score, self.nb_co, self.state)
+        display_map_phase1(self.map.known_Map(), self.state)
 
     def unknown_Map(self) -> Dict :
         known = copy.deepcopy(self.map.known_Map())
+        known = self.map.reconstruct_map_for_state(known)
         path = set(self.phase1_list) 
         result = {}
 
@@ -117,7 +106,7 @@ class Phase1():
 
         return result
 
-    def get_guard_offset(self, guard: int):
+    def get_guard_offset(self, guard: int) -> Tuple :
         if guard == HC.GUARD_N:
             offset = 0, 1
         elif guard == HC.GUARD_E:
@@ -143,7 +132,7 @@ class Phase1():
 
         return vision
     
-    def get_civil_offset(self, civil: int):
+    def get_civil_offset(self, civil: int) -> Tuple :
         if civil == HC.CIVIL_N:
             offset = 0, 1
         elif civil == HC.CIVIL_E:
@@ -155,7 +144,7 @@ class Phase1():
 
         return offset
     
-    def case_civil_vis(self, civil_x: int, civil_y: int, civil: int):
+    def case_civil_vis(self, civil_x: int, civil_y: int, civil: int) -> List :
         offset_x, offset_y = self.get_civil_offset(civil)
         pos = (civil_x, civil_y)
         x, y = pos
@@ -169,6 +158,7 @@ class Phase1():
     
     # phase1 specific gameplay functions
     def vision(self) -> int :
+
         nb_cases_visible = len(self.state['vision'])
         for i in range(nb_cases_visible) :
             is_a_personne = False
@@ -180,76 +170,96 @@ class Phase1():
             
             if element == HC.WALL :
                 score_case = float("-inf")
-                clause = self.map.var_mur(coord_case)
+                clause_nature = self.map.var_mur(coord_case)
+                self.map.sat.add_clause(clause_nature)
             elif element == HC.EMPTY :
-                clause = self.map.var_rien(coord_case)
+                clause_nature = self.map.var_rien(coord_case)
+                self.map.sat.add_clause(clause_nature)
+
+                self.phase1_list.append(coord_case) # for unknow display map
             elif element == HC.TARGET :
-                clause = self.map.var_cible(coord_case)
+                clause_nature = self.map.var_cible(coord_case)
+                self.map.sat.add_clause(clause_nature)
             elif element == HC.PIANO_WIRE :
-                clause = self.map.var_corde(coord_case)
+                clause_nature = self.map.var_corde(coord_case)
+                self.map.sat.add_clause(clause_nature)
             elif element == HC.SUIT :
-                clause = self.map.var_costume(coord_case)
+                clause_nature = self.map.var_costume(coord_case)
+                self.map.sat.add_clause(clause_nature)
                 
             elif element == HC.GUARD_E or element == HC.GUARD_N or element == HC.GUARD_S or element == HC.GUARD_W :
+                
                 is_a_personne = True # detect a person
                 cases_vues = self.case_guard_vis(coord_case[0], coord_case[1], element)
+
                 print(f"vision du garde ({coord_case[0]},{coord_case[1]}) : {cases_vues}")
-                clause = self.map.var_guard(coord_case) # clause de guard
-                self.map.sat.add_clause(clause)
-                clause = self.map.var_not_civil(coord_case) # clause de non civil
-                self.map.sat.add_clause(clause) # ajout de la clause
+
+                clause_type = self.map.var_guard(coord_case) # clause de guard
+                self.map.sat.add_clause(clause_type)
+                clause_not_type = self.map.var_not_civil(coord_case) # clause de non civil
+                self.map.sat.add_clause(clause_not_type) # ajout de la clause
+
                 for case in cases_vues : 
                     clause_safe = self.map.var_not_safe(case)
                     self.map.sat.add_clause(clause_safe)
                     self.map.set_grille_score(case, -10)
+
                 if element == HC.GUARD_E : 
-                    clause = self.map.var_east(coord_case)
+                    clause_orientation = self.map.var_east(coord_case)
                 elif element == HC.GUARD_N : 
-                    clause = self.map.var_north(coord_case)
+                    clause_orientation = self.map.var_north(coord_case)
                 elif element == HC.GUARD_S : 
-                    clause = self.map.var_south(coord_case)
+                    clause_orientation = self.map.var_south(coord_case)
                 elif element == HC.GUARD_W : 
-                    clause = self.map.var_west(coord_case)
+                    clause_orientation = self.map.var_west(coord_case)
+
+                self.map.sat.add_clause(clause_orientation)
 
             elif element == HC.CIVIL_E or element == HC.CIVIL_N or element == HC.CIVIL_S or element == HC.CIVIL_W :
+                
                 is_a_personne = True
                 cases_vues = self.case_civil_vis(coord_case[0], coord_case[1], element)
+
                 print(f"vision du civil ({coord_case[0]},{coord_case[1]}) : {cases_vues}")
-                clause = self.map.var_civil(coord_case) # clause de civil
-                self.map.sat.add_clause(clause) # ajout de la clause
-                clause = self.map.var_not_guard(coord_case) # clause de non guard
-                self.map.sat.add_clause(clause) # ajout de la clause
+
+                clause_type = self.map.var_civil(coord_case) # clause de civil
+                self.map.sat.add_clause(clause_type) # ajout de la clause
+                clause_not_type = self.map.var_not_guard(coord_case) # clause de non guard
+                self.map.sat.add_clause(clause_not_type) # ajout de la clause
+
                 for case in cases_vues : 
                     clause_safe = self.map.var_not_safe(case)
                     self.map.sat.add_clause(clause_safe)
                     self.map.set_grille_score(case, -10)
+
                 if element == HC.CIVIL_E : 
-                    clause = self.map.var_east(coord_case)
+                    clause_orientation = self.map.var_east(coord_case)
                 elif element == HC.CIVIL_N : 
-                    clause = self.map.var_north(coord_case)
+                    clause_orientation = self.map.var_north(coord_case)
                 elif element == HC.CIVIL_S : 
-                    clause = self.map.var_south(coord_case)
+                    clause_orientation = self.map.var_south(coord_case)
                 elif element == HC.CIVIL_W : 
-                    clause = self.map.var_west(coord_case)
+                    clause_orientation = self.map.var_west(coord_case)
+
+                self.map.sat.add_clause(clause_orientation)
 
             if is_a_personne == False :
-                clause_personne = self.map.var_not_personne(coord_case) #TODO temp remove
+                clause_personne = self.map.var_not_personne(coord_case)
                 if self.map.get_grille_score(coord_case) >= 0 :
                     self.map.set_grille_score(coord_case, score_case)
             else :
                 score_case = -15
-                clause_personne = self.map.var_personne(coord_case) #TODO temp remove
+                clause_personne = self.map.var_personne(coord_case)
                 self.map.set_grille_score(coord_case, score_case)
-            # self.map.add_person_clause(clause_personne)
-            self.map.sat.add_clause(clause_personne) #TODO temp remove
-            self.map.add_known_clause(clause)
-            self.map.sat.add_clause(clause)
+
+            self.map.sat.add_clause(clause_personne)
+
             print(f"{element} en ({coord_case[0]}, {coord_case[1]})", end="|")
         print()
             
         return nb_cases_visible
 
-    def hear(self):
+    def hear(self) -> None :
 
         nb_personne_entendue = self.state["hear"]
         hitman_pos = self.state["position"]
@@ -298,15 +308,15 @@ class Phase1():
 
             v_personne = self.map.var_personne(coord)[0]
 
-            result_p = self.map.sat.solve(assumptions=[v_personne])
-            result_non_p = self.map.sat.solve(assumptions=[-v_personne])
+            result_p = self.map.sat.solve(assumptions = [v_personne])
+            result_non_p = self.map.sat.solve(assumptions = [-v_personne])
 
             # personne certaine
-            if result_p and not result_non_p:
+            if result_p and not result_non_p :
                 personnes_connues += 1
 
             # personne impossible
-            elif (not result_p) and result_non_p:
+            elif (not result_p) and result_non_p :
                 continue
 
             # inconnu
@@ -320,61 +330,54 @@ class Phase1():
 
         reste = nb_personne_entendue - personnes_connues
 
-        if reste < 0:
+        if reste < 0 :
             raise Exception("hear incohérent avec les connaissances SAT")
         
-        if reste == 0:
+        if reste == 0 :
             for v in variables_inconnues:
                 self.map.sat.add_clause([-v])
             return
 
-        if variables_inconnues:
-            clauses = exactly_number(
-                variables_inconnues,
-                reste
-            )
+        if variables_inconnues :
+            clauses = exactly_number(variables_inconnues, reste)
 
-            for clause in clauses:
+            for clause in clauses :
                 self.map.sat.add_clause(clause)
 
     #=================================================================================
-    def build_frontier(self):
+
+    def build_frontier(self) -> List :
 
         frontier = []
         known_map = self.map.known_Map()
 
-        for x in range(self.map.nb_colonnes):
-            for y in range(self.map.nb_lignes):
+        for x in range(self.map.nb_colonnes) :
+            for y in range(self.map.nb_lignes) :
 
                 pos = (x, y)
-                if self.map.get_grille_score(pos) != 20:
+                if self.map.get_grille_score(pos) != 20 :
                     continue
 
-                for dx, dy in [(0,1),(0,-1),(1,0),(-1,0)]:
+                for dx, dy in [(0,1),(0,-1),(1,0),(-1,0)] :
                     neigh = (x+dx, y+dy)
-                    if neigh in known_map and self.map.get_grille_score(neigh) != 20:
+                    if neigh in known_map and self.map.get_grille_score(neigh) != 20 :
                         frontier.append(pos)
                         break
-        print("frontier", frontier)
-        # print("known_map", known_map)
+        # print("frontier", frontier)
         return frontier
 
     def heuristique(self, position: Tuple, target: Tuple) -> int :
         return abs(position[0] - target[0]) + abs(position[1] - target[1])
                 
-    def exploration_score(self, pos):
+    def exploration_score(self, pos) -> int :
 
         score = 0
-        x, y = pos
 
         # frontière
         score += 50
 
         # distance
-        dist = self.heuristique(
-            self.state["position"],
-            pos
-        )
+        dist = self.heuristique(self.state["position"], pos)
         score -= dist
         # déjà visité
         if pos in self.phase1_list:
@@ -390,17 +393,17 @@ class Phase1():
 
         return score
 
-    def choose_frontier(self):
+    def choose_frontier(self) -> Tuple[int,int] :
 
         frontier = self.build_frontier()
 
-        if not frontier:
+        if not frontier :
             return None
 
         best = None
         best_score = float("-inf")
 
-        for pos in frontier:
+        for pos in frontier :
 
             s = self.exploration_score(pos)
 
@@ -410,25 +413,22 @@ class Phase1():
 
         return best
     
-    def est_position_valide_phase1(self, pos):
-        print("thinking position...")
+    def est_position_valide_phase1(self, pos) -> bool :
+        # print("thinking position...", end = "")
         carte = self.map.known_Map().keys()
-        if pos not in carte:
+        if pos not in carte :
             return False
 
-        x, y = pos
-
-        if self.map.case_mur(pos):
+        if self.map.case_mur(pos) :
             return False
 
-        if self.map.case_personne(pos):
-            # print(f"personne en {x},{y}")
+        if self.map.case_personne(pos) :
             return False
 
         return True
     
-    def movement_cost(self, pos):
-        print("thinking movement...")
+    def movement_cost(self, pos) -> int :
+        # print("thinking movement...", end = "")
         cost = 1
 
         if pos in self.phase1_list:
@@ -442,7 +442,7 @@ class Phase1():
 
         return cost
     
-    def build_path_exploration(self):
+    def build_path_exploration(self) -> List | None :
 
         target = self.choose_frontier()
         print("target chosen", target)
@@ -459,28 +459,28 @@ class Phase1():
             (self.heuristique(position, target), 0, position, [position])
         )
 
-        while priority:
+        while priority :
 
             _, g, current_pos, path = heapq.heappop(priority)
 
-            if current_pos == target:
+            if current_pos == target :
                 return path
 
-            if current_pos in visited:
+            if current_pos in visited :
                 continue
 
             visited.add(current_pos)
 
-            for dx, dy in [(0,1),(0,-1),(1,0),(-1,0)]:
+            for dx, dy in [(0,1),(0,-1),(1,0),(-1,0)] :
                 new_pos = (
                     current_pos[0] + dx,
                     current_pos[1] + dy
                 )
 
-                if not self.est_position_valide_phase1(new_pos):
+                if not self.est_position_valide_phase1(new_pos) :
                     continue
 
-                if new_pos in visited:
+                if new_pos in visited :
                     continue
 
                 new_path = path + [new_pos]
@@ -586,27 +586,27 @@ class Phase1():
         self.state = actions[action]()
         self.current_action  = action[3:].replace("()", "  ")
 
-    def next_step_valid(self):
+    def next_step_valid(self) -> bool :
 
-        if self.current_path is None:
+        if self.current_path is None :
             return False
 
         current_pos = self.state["position"]
 
         try:
             idx = self.current_path.index(current_pos)
-        except ValueError:
+        except ValueError :
             return False
 
-        if idx + 1 >= len(self.current_path):
+        if idx + 1 >= len(self.current_path) :
             return True
 
         next_pos = self.current_path[idx + 1]
 
-        if self.map.case_mur(next_pos):
+        if self.map.case_mur(next_pos) :
             return False
 
-        if self.map.case_personne(next_pos):
+        if self.map.case_personne(next_pos) :
             return False
         
         if len(self.current_path) > 0 : # if target can be defined, no need to go on it
@@ -618,19 +618,12 @@ class Phase1():
 
     def step(self) -> Dict :
 
-        print("SAT global =", self.map.sat.solve([]))
-        print(self.map.grille_scores)
+        # print("SAT global =", self.map.sat.solve([]))
+        # print(self.map.grille_scores)
 
-        self.vision()
-        self.hear() #TODO temp remove
-        self.affichage_jeu_phase1() #TODO affichage already in main file while running the programm
-
-        if not self.next_step_valid():
-
-            print("NEXT STEP BLOQUE")
-
-            self.actions = []
-            self.prepare_actions()
+        if self.map.early_stopping() :
+            self.done = True
+            return self.get_state()
 
         now = time.time()
         if self.done :
@@ -638,6 +631,22 @@ class Phase1():
         
         if now - self.last_update < self.delay :
             return self.get_state()
+        
+        self.phase1_list.append((
+            self.state['position'][0], 
+            self.state['position'][1]
+        ))
+
+        self.vision()
+        self.hear()
+        self.affichage_jeu_phase1()
+
+        if not self.next_step_valid() :
+
+            # print("NEXT STEP BLOQUE")
+
+            self.actions = []
+            self.prepare_actions()
 
         # Plus d'actions à jouer ?
         if len(self.actions) == 0 :
@@ -651,6 +660,4 @@ class Phase1():
         action = self.actions.pop(0)
 
         self.execute_action(action)
-        # self.affichage_jeu_phase1() #TODO affichage already in main file while running the programm
-
         return self.get_state()

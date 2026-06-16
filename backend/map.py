@@ -1,7 +1,7 @@
-import subprocess
 from typing import List, Tuple, Dict
 from itertools import combinations
 import numpy as np
+import pickle
 import os
 from hitman.hitman import HC 
 from pysat.solvers import Glucose3
@@ -39,31 +39,13 @@ def affiche_star_2() :
     print(r"-------------------------------------------------------------------------------")
 #-----------------------------AFFICHAGE MAP------------------------------------------------
 
-def remove(string: str) -> Dict:
-    for i in range(1, 18):
-        placeholder = f": {i}>"
-        replacement = ""
-        string = string.replace(placeholder, replacement)
-    string = string.replace("<", "")
-    dico = eval(string)
-    return dico
-
-def display_map_phase1(map: Dict, position: str, iteration: str, score: str, nb_co:str, state: Dict) -> None:
+def display_map_phase1(map: Dict, state: Dict) -> None:
     symbols = {
         HC.EMPTY: " ",
         HC.SUIT: "S",
-        # HC.GUARD_N: "G",
-        # HC.GUARD_W: "G",
-        # HC.GUARD_E: "G",
-        # HC.GUARD_S: "G",
         HC.WALL: "#",
         HC.TARGET: "T",
-        # HC.CIVIL_N: "C",
-        # HC.CIVIL_W: "C",
-        # HC.CIVIL_E: "C",
-        # HC.CIVIL_S: "C",
         HC.PIANO_WIRE: "P",
-        #"HITMAN": "H",
         HC.N: "^",
         HC.S: "v",
         HC.E: ">", 
@@ -114,17 +96,7 @@ def display_map_phase1(map: Dict, position: str, iteration: str, score: str, nb_
                         if len(element) == 3 :
                             symbol = symbol + "_" + symbols[element[2]] # orientation
             print(" {0:^{1}} |".format(symbol, cell_width), end="")
-
-        if y == max_y :
-            print("\t", position) # display current position
-        elif y == max_y - 1 :
-            print("\t", iteration) # display current iteration
-        elif y == max_y - 2 :
-            print("\t", score) # display current score
-        elif y == max_y - 3 :
-            print("\t", nb_co) # display current number of known cases
-        else :
-            print()
+        print()
         print("+-----" * (max_x + 1) + "+")
 
 
@@ -132,18 +104,17 @@ def display_map_phase2(map: Dict, state: Dict) -> None:
     symbols = {
         HC.EMPTY: " ",
         HC.SUIT: "S",
-        HC.GUARD_N: "G",
-        HC.GUARD_W: "G",
-        HC.GUARD_E: "G",
-        HC.GUARD_S: "G",
+        HC.GUARD_N: "G_N",
+        HC.GUARD_W: "G_W",
+        HC.GUARD_E: "G_E",
+        HC.GUARD_S: "G_S",
         HC.WALL: "#",
         HC.TARGET: "T",
-        HC.CIVIL_N: "C",
-        HC.CIVIL_W: "C",
-        HC.CIVIL_E: "C",
-        HC.CIVIL_S: "C",
+        HC.CIVIL_N: "C_N",
+        HC.CIVIL_W: "C_W",
+        HC.CIVIL_E: "C_E",
+        HC.CIVIL_S: "C_S",
         HC.PIANO_WIRE: "P",
-        #"HITMAN": "H",
         HC.N: "^",
         HC.S: "v",
         HC.E: ">", 
@@ -175,53 +146,20 @@ def display_map_phase2(map: Dict, state: Dict) -> None:
 
 #-----------------------------AFFICHAGE MAP------------------------------------------------
 
-#-----------------------------FONCTIONS DE FICHIER--------------------------------------------
-def clauses_to_dimacs(clauses: ClauseBase, nb_vars: int) -> str:
-    dimacs = str()
-    nb_clauses = 0
-    for clause in clauses : 
-        for el in clause : 
-            dimacs += str(el) + " "
-        dimacs += "0\n"
-        nb_clauses += 1
-    result = 'p cnf ' + str(nb_vars) +' '+ str(nb_clauses) + '\n' + dimacs
-    return result
-
-def write_dimacs_file(dimacs: str, filename: str):
-    with open(filename, "w", newline="") as cnf:
-        cnf.write(dimacs)
-
-def clean_file():
-    os.remove("cnf_directory/known_case.cnf")
-
-def exec_gophersat(filename: str, cmd: str = "./gophersat.exe", encoding: str = "utf8") -> Tuple[bool, List[int]]:
-    result = subprocess.run(
-        [cmd, filename], capture_output=True, check=True, encoding=encoding
-    )
-    string = str(result.stdout)
-    lines = string.splitlines()
-    if lines[1] != "s SATISFIABLE":
-        return False, []
-
-    model = lines[2][2:-2].split(" ")
-
-    return True, [int(x) for x in model]
-#-----------------------------FONCTIONS DE FICHIER--------------------------------------------
-
-
-
 #-----------------------------FONCTIONS SUR LES CONTRAINTES--------------------------------------------
+
 def at_least_one(variables: List[PropositionnalVariable]) -> Clause : 
     return variables[:]
 
-def at_most_number(variables,number):
+def at_most_number(variables: List[PropositionnalVariable], number: int) -> Clause :
     clauses = []
     for combination in combinations(variables, number+1):
         clause = [-num for num in combination]
         clauses.append(clause)
+
     return clauses
 
-def at_least_number(variables, number):
+def at_least_number(variables: List[PropositionnalVariable], number: int) -> Clause :
     clauses = []
     n = len(variables)
     for combination in combinations(variables, n - number + 1):
@@ -229,47 +167,44 @@ def at_least_number(variables, number):
 
     return clauses
 
-def exactly_number(variables, number):
+def exactly_number(variables: List[PropositionnalVariable], number: int) -> Clause :
     clauses = []
-
     clauses.extend(at_least_number(variables, number))
     clauses.extend(at_most_number(variables, number))
 
     return clauses
+
 #-----------------------------FONCTIONS SUR LES CONTRAINTES--------------------------------------------
 
 class SATEngine:
-    def __init__(self):
+    def __init__(self) :
         self.solver = Glucose3()
         self.nb_vars = 0
 
-    def add_clause(self, clause):
+    def add_clause(self, clause) :
         self.solver.add_clause(clause)
 
-        if not self.solver.solve():
-            print("CLAUSE FATALE :", clause)
-            raise Exception("SAT devenu UNSAT")
+    def check(self) :
+        return self.solver.solve()
 
-    def solve(self, assumptions=None):
+    def solve(self, assumptions=None) :
+        if assumptions is None:
+            assumptions = []
         return self.solver.solve(assumptions=assumptions)
 
-    def model(self):
+    def model(self) :
         return self.solver.get_model()
     
 #-----------------------------Class Map--------------------------------------------
 class Map():
-    def __init__(self, m: int, n: int, nb_gardes: int, nb_civils: int) -> None:
+    def __init__(self, m: int, n: int, nb_gardes: int, nb_civils: int) -> None :
         
         self.nb_lignes = m
         self.nb_colonnes = n
         self.nb_cases_a_trouver = int(n*m*0.95)
 
-        self.clauses_safe = []
-        self.clauses_personnes = []
-        self.clauses_personnes_probable = []
         self.clauses_connues = []
-        self.clauses_passage = []
-        self.nb_variables = 22
+        self.nb_variables = 13
         self.rien = 0
         self.mur = 1
         self.corde = 2
@@ -287,18 +222,6 @@ class Map():
         self.west  = 11
 
         self.safe = 12
-        self.case_passage = 13
-
-        self.garde_n = 14
-        self.garde_s = 15
-        self.garde_e = 16
-        self.garde_w = 17
-
-        self.civil_n = 18
-        self.civil_s = 19
-        self.civil_e = 20
-        self.civil_w = 21
-
 
         self.nb_gardes = nb_gardes
         self.nb_civils = nb_civils
@@ -310,75 +233,7 @@ class Map():
 
         self.init_var_Map()
 
-    def init_assumptions_guard(self) :
-        guard_variables = []
-
-        for y in range(self.nb_lignes):
-            for x in range(self.nb_colonnes):
-
-                guard_variables.append(self.cell_to_variable(y,x,self.garde_n))
-
-                guard_variables.append(self.cell_to_variable(y,x,self.garde_s))
-
-                guard_variables.append(self.cell_to_variable(y,x,self.garde_e))
-
-                guard_variables.append(self.cell_to_variable(y,x,self.garde_w))
-
-        guard_clauses = exactly_number(
-            guard_variables,
-            self.nb_gardes
-        )
-
-        for clause in guard_clauses:
-            self.sat.add_clause(clause)
-
-    def init_assumptions_civil(self) :
-        civil_variables = []
-
-        for y in range(self.nb_lignes):
-            for x in range(self.nb_colonnes):
-
-                civil_variables.append(self.cell_to_variable(y,x,self.civil_n))
-
-                civil_variables.append(self.cell_to_variable(y,x,self.civil_s))
-
-                civil_variables.append(self.cell_to_variable(y,x,self.civil_e))
-
-                civil_variables.append(self.cell_to_variable(y,x,self.civil_w))
-
-        civil_clauses = exactly_number(
-            civil_variables,
-            self.nb_civils
-        )
-
-        for clause in civil_clauses:
-            self.sat.add_clause(clause)
-
-    def is_true(self, var):
-
-        return (
-            self.sat.solve(assumptions=[var])
-            and
-            not self.sat.solve(assumptions=[-var])
-        )
-
-    def init_assumptions_personne(self) :
-        personne_variables = []
-
-        for y in range(self.nb_lignes):
-            for x in range(self.nb_colonnes):
-
-                personne_variables.append(self.cell_to_variable(y,x,self.personne))
-
-        personne_clauses = exactly_number(
-            personne_variables,
-            self.nb_civils + self.nb_gardes # total personne
-        )
-
-        for clause in personne_clauses:
-            self.sat.add_clause(clause)
-    
-    def num_to_obj_HC(self,num: int) -> object :
+    def num_to_obj_HC(self, num: int) -> object :
         if num == 0 : 
             return HC.EMPTY
         elif num == 1 : 
@@ -407,46 +262,31 @@ class Map():
         elif num == 11 : 
             return HC.WEST
         
-        elif num == 14 : 
-            return HC.GUARD_S
-        elif num == 15 : 
-            return HC.GUARD_S
-        elif num == 16 : 
-            return HC.GUARD_E
-        elif num == 17 : 
-            return HC.GUARD_W
-        
-        elif num == 18 : 
-            return HC.CIVIL_N
-        elif num == 19 : 
-            return HC.CIVIL_S
-        elif num == 20 : 
-            return HC.CIVIL_E
-        elif num == 21 : 
-            return HC.CIVIL_W
-        
         else:
             return HC.UNKNOWN 
 
-    def add_safe_clause(self, clause: Clause) -> List :
-        self.clauses_safe.append(clause)
-        return self.clauses_safe
-    
-    def add_pass_clause(self, clause: Clause) -> List :
-        self.clauses_passage.append(clause)
-        return self.clauses_passage
-    
-    def add_person_clause(self, clause: Clause) -> List :
-        self.clauses_personnes.append(clause)
-        return self.clauses_personnes
-    
-    def add_person_prob_clause(self, clause: Clause) -> List :
-        self.clauses_personnes_probable.append(clause)
-        return self.clauses_personnes_probable
-    
-    def add_known_clause(self, clause: Clause) -> List :
-        self.clauses_connues.append(clause)
-        return self.clauses_connues
+    def reconstruct_map_for_state(self, dico: Dict) -> Dict :
+        reonstruction_person = {
+            (HC.PERSON, HC.CIVIL, HC.NORTH) : HC.CIVIL_N,
+            (HC.PERSON, HC.CIVIL, HC.SOUTH) : HC.CIVIL_E,
+            (HC.PERSON, HC.CIVIL, HC.EAST) : HC.CIVIL_S,
+            (HC.PERSON, HC.CIVIL, HC.WEST) : HC.CIVIL_W,
+            
+            (HC.PERSON, HC.GUARD, HC.NORTH) : HC.GUARD_N,
+            (HC.PERSON, HC.GUARD, HC.SOUTH) : HC.GUARD_E,
+            (HC.PERSON, HC.GUARD, HC.EAST) : HC.GUARD_S,
+            (HC.PERSON, HC.GUARD, HC.WEST) : HC.GUARD_W,
+        }
+
+        for pos in dico.keys() :
+            element = dico[pos]
+            if len(element) == 1 :
+                dico[pos] = element[0]
+            elif len(element) == 3 :
+                nature, role, orientation = element
+                dico[pos] = reonstruction_person[(nature, role, orientation)]
+                    
+        return dico
 
     def cell_to_variable(self, y: int, x: int, val: int) -> PropositionnalVariable :
         return (y + (self.nb_colonnes - 1) * y + x) * self.nb_variables + (val + 1)
@@ -459,301 +299,187 @@ class Map():
         j = x - (i + (self.nb_colonnes - 1) * i)
         return [i, j, v]
     
-    def init_var_Map(self) -> None:
+    def init_var_Map(self) -> None :
 
+        file_path = "base_sat.pkl"
         clauses = []
 
-        # =====================================================
-        # EXACTEMENT UNE NATURE PAR CASE
-        # =====================================================
+        if os.path.isfile(file_path):
+            with open(file_path, "rb") as f:
+                clauses = pickle.load(f)
 
-        nature_variables = [
-            self.rien,
-            self.mur,
-            self.corde,
-            self.costume,
-            self.cible,
-            self.personne
-        ]
-
-        for y in range(self.nb_lignes):
-            for x in range(self.nb_colonnes):
-
-                vars_case = [
-                    self.cell_to_variable(y, x, v)
-                    for v in nature_variables
-                ]
-
-                clauses.extend(
-                    exactly_number(vars_case, 1)
-                )
-
-        # =====================================================
-        # OBJETS UNIQUES SUR LA CARTE
-        # =====================================================
-
-        for variable in [
-            self.corde,
-            self.costume,
-            self.cible
-        ]:
-
-            vars_objet = []
+            for clause in clauses:
+                self.sat.add_clause(clause)
+        else :
+            # =====================================================
+            # EXACTEMENT UNE NATURE PAR CASE
+            # =====================================================
+            nature_variables = [
+                self.rien,
+                self.mur,
+                self.corde,
+                self.costume,
+                self.cible,
+                self.personne
+            ]
 
             for y in range(self.nb_lignes):
                 for x in range(self.nb_colonnes):
 
-                    vars_objet.append(
-                        self.cell_to_variable(
-                            y,
-                            x,
-                            variable
+                    vars_case = [
+                        self.cell_to_variable(y, x, v)
+                        for v in nature_variables
+                    ]
+                    clauses.extend(exactly_number(vars_case, 1))
+
+            # =====================================================
+            # OBJETS UNIQUES SUR LA CARTE
+            # =====================================================
+            for variable in [
+                self.corde,
+                self.costume,
+                self.cible
+            ]:
+                vars_objet = []
+                for y in range(self.nb_lignes):
+                    for x in range(self.nb_colonnes):
+
+                        vars_objet.append(
+                            self.cell_to_variable(y, x, variable)
                         )
+
+                clauses.extend(
+                    exactly_number(vars_objet, 1)
+                )
+
+            # =====================================================
+            # PERSONNE <-> GUARD/CIVIL
+            # =====================================================
+            for y in range(self.nb_lignes):
+                for x in range(self.nb_colonnes):
+
+                    personne = self.cell_to_variable(y, x, self.personne)
+                    guard = self.cell_to_variable( y, x, self.guard)
+                    civil = self.cell_to_variable(y, x, self.civil)
+
+                    # guard -> personne
+                    clauses.append([-guard, personne])
+
+                    # civil -> personne
+                    clauses.append([-civil, personne])
+
+                    # personne -> guard ou civil
+                    clauses.append([-personne, guard, civil])
+
+                    # pas les deux
+                    clauses.append([-guard, -civil])
+
+            # =====================================================
+            # ORIENTATIONS
+            # =====================================================
+            for y in range(self.nb_lignes):
+                for x in range(self.nb_colonnes):
+
+                    personne = self.cell_to_variable(y, x, self.personne)
+                    guard = self.cell_to_variable(y, x, self.guard)
+                    civil = self.cell_to_variable(y, x, self.civil)
+
+                    north = self.cell_to_variable(y, x, self.north)
+                    south = self.cell_to_variable(y, x, self.south)
+                    east = self.cell_to_variable(y, x, self.east)
+                    west = self.cell_to_variable(y, x, self.west)
+
+                    orientation_vars = [north, south, east, west]
+
+                    # guard -> au moins une orientation
+                    clauses.append([-guard, north, south, east, west])
+
+                    # civil -> au moins une orientation
+                    clauses.append([-civil, north, south, east, west])
+
+                    # au plus une orientation
+                    clauses.extend(
+                        at_most_number(orientation_vars, 1)
+                    )
+
+                    # orientation -> personne
+                    for orient in orientation_vars:
+                        clauses.append([-orient, personne])
+
+                    # orientation -> guard ou civil
+                    for orient in orientation_vars:
+                        clauses.append([-orient, guard, civil])
+
+            # =====================================================
+            # NOMBRE TOTAL DE PERSONNES
+            # =====================================================
+            personne_variables = []
+
+            for y in range(self.nb_lignes):
+                for x in range(self.nb_colonnes):
+
+                    personne_variables.append(
+                        self.cell_to_variable(y, x, self.personne)
                     )
 
             clauses.extend(
-                exactly_number(
-                    vars_objet,
-                    1
-                )
+                exactly_number(personne_variables, self.nb_gardes + self.nb_civils)
             )
 
-        # =====================================================
-        # PERSONNE <-> GUARD/CIVIL
-        # =====================================================
+            # =====================================================
+            # NOMBRE TOTAL DE GUARDS
+            # =====================================================
+            guard_variables = []
 
-        for y in range(self.nb_lignes):
-            for x in range(self.nb_colonnes):
+            for y in range(self.nb_lignes):
+                for x in range(self.nb_colonnes):
 
-                personne = self.cell_to_variable(
-                    y,
-                    x,
-                    self.personne
-                )
-
-                guard = self.cell_to_variable(
-                    y,
-                    x,
-                    self.guard
-                )
-
-                civil = self.cell_to_variable(
-                    y,
-                    x,
-                    self.civil
-                )
-
-                # guard -> personne
-                clauses.append([
-                    -guard,
-                    personne
-                ])
-
-                # civil -> personne
-                clauses.append([
-                    -civil,
-                    personne
-                ])
-
-                # personne -> guard ou civil
-                clauses.append([
-                    -personne,
-                    guard,
-                    civil
-                ])
-
-                # pas les deux
-                clauses.append([
-                    -guard,
-                    -civil
-                ])
-
-        # =====================================================
-        # ORIENTATIONS
-        # =====================================================
-
-        for y in range(self.nb_lignes):
-            for x in range(self.nb_colonnes):
-
-                personne = self.cell_to_variable(
-                    y,
-                    x,
-                    self.personne
-                )
-
-                guard = self.cell_to_variable(
-                    y,
-                    x,
-                    self.guard
-                )
-
-                civil = self.cell_to_variable(
-                    y,
-                    x,
-                    self.civil
-                )
-
-                north = self.cell_to_variable(
-                    y,
-                    x,
-                    self.north
-                )
-
-                south = self.cell_to_variable(
-                    y,
-                    x,
-                    self.south
-                )
-
-                east = self.cell_to_variable(
-                    y,
-                    x,
-                    self.east
-                )
-
-                west = self.cell_to_variable(
-                    y,
-                    x,
-                    self.west
-                )
-
-                orientation_vars = [
-                    north,
-                    south,
-                    east,
-                    west
-                ]
-
-                # guard -> au moins une orientation
-                clauses.append([
-                    -guard,
-                    north,
-                    south,
-                    east,
-                    west
-                ])
-
-                # civil -> au moins une orientation
-                clauses.append([
-                    -civil,
-                    north,
-                    south,
-                    east,
-                    west
-                ])
-
-                # au plus une orientation
-                clauses.extend(
-                    at_most_number(
-                        orientation_vars,
-                        1
+                    guard_variables.append(
+                        self.cell_to_variable(y, x, self.guard)
                     )
-                )
 
-                # orientation -> personne
-                for orient in orientation_vars:
-
-                    clauses.append([
-                        -orient,
-                        personne
-                    ])
-
-                # orientation -> guard ou civil
-                for orient in orientation_vars:
-
-                    clauses.append([
-                        -orient,
-                        guard,
-                        civil
-                    ])
-
-        # =====================================================
-        # NOMBRE TOTAL DE PERSONNES
-        # =====================================================
-
-        personne_variables = []
-
-        for y in range(self.nb_lignes):
-            for x in range(self.nb_colonnes):
-
-                personne_variables.append(
-                    self.cell_to_variable(
-                        y,
-                        x,
-                        self.personne
-                    )
-                )
-
-        clauses.extend(
-            exactly_number(
-                personne_variables,
-                self.nb_gardes + self.nb_civils
+            clauses.extend(
+                exactly_number(guard_variables, self.nb_gardes)
             )
+
+            # =====================================================
+            # NOMBRE TOTAL DE CIVILS
+            # =====================================================
+            civil_variables = []
+
+            for y in range(self.nb_lignes):
+                for x in range(self.nb_colonnes):
+
+                    civil_variables.append(
+                        self.cell_to_variable(y, x, self.civil)
+                    )
+
+            clauses.extend(
+                exactly_number(civil_variables, self.nb_civils)
+            )
+
+            # =====================================================
+            # ENREGISTREMENT
+            # =====================================================
+            for clause in clauses:
+                self.sat.add_clause(clause)
+
+            if not self.sat.check():
+                raise Exception("Init UNSAT")
+
+            with open(file_path, "wb") as f:
+                pickle.dump(clauses, f)
+
+    def is_true(self, var: PropositionnalVariable) -> bool :
+
+        return (
+            self.sat.solve(assumptions = [var])
+            and
+            not self.sat.solve(assumptions = [-var])
         )
 
-        # =====================================================
-        # NOMBRE TOTAL DE GUARDS
-        # =====================================================
-
-        guard_variables = []
-
-        for y in range(self.nb_lignes):
-            for x in range(self.nb_colonnes):
-
-                guard_variables.append(
-                    self.cell_to_variable(
-                        y,
-                        x,
-                        self.guard
-                    )
-                )
-
-        clauses.extend(
-            exactly_number(
-                guard_variables,
-                self.nb_gardes
-            )
-        )
-
-        # =====================================================
-        # NOMBRE TOTAL DE CIVILS
-        # =====================================================
-
-        civil_variables = []
-
-        for y in range(self.nb_lignes):
-            for x in range(self.nb_colonnes):
-
-                civil_variables.append(
-                    self.cell_to_variable(
-                        y,
-                        x,
-                        self.civil
-                    )
-                )
-
-        clauses.extend(
-            exactly_number(
-                civil_variables,
-                self.nb_civils
-            )
-        )
-
-        # =====================================================
-        # ENREGISTREMENT
-        # =====================================================
-
-        for clause in clauses:
-
-            self.clauses_connues.append(clause)
-
-            self.sat.add_clause(clause)
-            
     def var_mur(self, pos: Position) -> List :
         return [self.cell_to_variable(pos[1], pos[0], self.mur)]
-
-    def var_not_mur(self, pos: Position) -> List :
-        return [-self.cell_to_variable(pos[1], pos[0], self.mur)]
 
     def var_corde(self, pos: Position) -> List :
         return [self.cell_to_variable(pos[1], pos[0], self.corde)]
@@ -782,86 +508,75 @@ class Map():
     def var_guard(self, pos: Position) -> List :
         return [self.cell_to_variable(pos[1], pos[0], self.guard)]
 
-    def var_guard_n(self, pos: Position) -> List :
-        return [self.cell_to_variable(pos[1], pos[0], self.garde_n)]
-
-    def var_guard_s(self, pos: Position) -> List :
-        return [self.cell_to_variable(pos[1] ,pos[0], self.garde_s)]
-
-    def var_guard_e(self, pos: Position) -> List :
-        return [self.cell_to_variable(pos[1], pos[0], self.garde_e)]
-
-    def var_guard_w(self, pos: Position) -> List :
-        return [self.cell_to_variable(pos[1], pos[0], self.garde_w)]
-    
     def var_not_guard(self, pos: Position) -> List :
         return [-self.cell_to_variable(pos[1], pos[0], self.guard)]
 
-    def var_not_guard_n(self, pos: Position) -> List :
-        return [-self.cell_to_variable(pos[1], pos[0], self.garde_n)]
-
-    def var_not_guard_s(self, pos: Position) -> List :
-        return [-self.cell_to_variable(pos[1] ,pos[0], self.garde_s)]
-
-    def var_not_guard_e(self, pos: Position) -> List :
-        return [-self.cell_to_variable(pos[1], pos[0], self.garde_e)]
-
-    def var_not_guard_w(self, pos: Position) -> List :
-        return [-self.cell_to_variable(pos[1], pos[0], self.garde_w)]
-    
     def var_civil(self, pos: Position) -> List :
         return [self.cell_to_variable(pos[1], pos[0], self.civil)]
-
-    def var_civil_n(self, pos: Position) -> List :
-        return [self.cell_to_variable(pos[1], pos[0], self.civil_n)]
-
-    def var_civil_s(self, pos: Position) -> List :
-        return [self.cell_to_variable(pos[1], pos[0], self.civil_s)]
-
-    def var_civil_e(self, pos: Position) -> List :
-        return [self.cell_to_variable(pos[1], pos[0], self.civil_e)]
-
-    def var_civil_w(self, pos: Position) -> List :
-        return [self.cell_to_variable(pos[1], pos[0], self.civil_w)]
 
     def var_not_civil(self, pos: Position) -> List :
         return [-self.cell_to_variable(pos[1], pos[0], self.civil)]
 
-    def var_not_civil_n(self, pos: Position) -> List :
-        return [-self.cell_to_variable(pos[1], pos[0], self.civil_n)]
-
-    def var_not_civil_s(self, pos: Position) -> List :
-        return [-self.cell_to_variable(pos[1], pos[0], self.civil_s)]
-
-    def var_not_civil_e(self, pos: Position) -> List :
-        return [-self.cell_to_variable(pos[1], pos[0], self.civil_e)]
-
-    def var_not_civil_w(self, pos: Position) -> List :
-        return [-self.cell_to_variable(pos[1], pos[0], self.civil_w)]
-    
     def var_north(self, pos: Position) -> List :
         return [self.cell_to_variable(pos[1], pos[0], self.north)]
-    
+
     def var_south(self, pos: Position) -> List :
         return [self.cell_to_variable(pos[1], pos[0], self.south)]
-    
+
     def var_east(self, pos: Position) -> List :
         return [self.cell_to_variable(pos[1], pos[0], self.east)]
     
     def var_west(self, pos: Position) -> List :
         return [self.cell_to_variable(pos[1], pos[0], self.west)]
 
-    def var_pass_case(self, pos: Position) -> List :
-        return [self.cell_to_variable(pos[1], pos[0], self.case_passage)]
+    def case_certaine(self, pos: Position) -> bool :
 
-    def var_not_pass_case(self, pos: Position) -> List :
-        return [-self.cell_to_variable(pos[1], pos[0], self.case_passage)]
+        x, y = pos
 
-    def known_case(self, pos: Position) -> bool :
-        colonne_x, ligne_y = pos
-        for clause in self.clauses_connues :
-            if len(clause) == 1 and self.variable_to_cell(clause[0])[0] == ligne_y and self.variable_to_cell(clause[0])[1] == colonne_x : 
+        natures = [
+            self.rien,
+            self.mur,
+            self.corde,
+            self.costume,
+            self.cible,
+            self.personne
+        ]
+
+        for nature in natures:
+
+            v = self.cell_to_variable(y, x, nature)
+
+            if self.is_true(v):
                 return True
+
+        return False
+
+    def nb_cases_certaines(self, phase = 1) -> List :
+
+        total = 0
+        which = []
+
+        for y in range(self.nb_lignes) :
+            for x in range(self.nb_colonnes) :
+
+                if phase == 1 :
+                    if self.case_certaine((x, y)) :
+                        total += 1
+                        which.append(f"{x},{y}")
+                else :
+                    total += 1
+                    which.append(f"{x},{y}")
+        return [total, which]
+
+    def early_stopping(self) -> bool :
+        nb, _ = self.nb_cases_certaines()
+
+        pourcentage = nb / (self.nb_lignes * self.nb_colonnes)
+
+        if pourcentage >= 0.95 :
+            print("Carte suffisamment reconstruite")
+            return True
+        
         return False
 
     def case_mur(self, pos: Position) -> bool :
@@ -893,47 +608,30 @@ class Map():
 
         return (not result_p) and result_non_p
 
-    def case_go(self, pos: Position) -> bool :
-        colonne_x, ligne_y = pos
+    def known_Map(self) -> Dict :
 
-        v = self.var_pass_case((colonne_x, ligne_y))[0]
-
-        result_p = self.sat.solve(assumptions = [v])
-        result_non_p = self.sat.solve(assumptions = [-v])
-
-        return result_p and not result_non_p
-
-    def known_Map(self) -> bool :
-        clauses = self.clauses_connues.copy()
-        # for i in range(self.nb_lignes) :
-        #     for j in range(self.nb_colonnes) :
-        #         clauses.append(self.var_not_safe((j, i)))
-        #         clauses.append(self.var_not_personne((j, i)))
-        #         clauses.append(self.var_not_pass_case((j, i)))
-
-        solver = Glucose3()
-
-        for clause in clauses :
-            solver.add_clause(clause)
-
-        if not solver.solve() :
-            print("KNOWN MAP SAT global =", solver.solve())
+        if not self.sat.solve():
+            print("KNOWN MAP SAT global = False")
             return {}
-        
-        modele = solver.get_model()
-        
-        dictionnaire = {}
-        for it in range(len(modele)) :
-            if modele[it] > 0 : 
-                ligne, colonne, num_objet = self.variable_to_cell(modele[it])
-                # print('y=',ligne, 'x=', colonne, num_objet)
-                objet = self.num_to_obj_HC(num_objet)
-                if (colonne, ligne) in dictionnaire.keys() :
-                    dictionnaire[(colonne, ligne)].append(objet)
-                else :
-                    dictionnaire[(colonne, ligne)] = [objet]
 
-        # print("known_map dico:", dictionnaire)
+        modele = self.sat.model()
+
+        dictionnaire = {}
+
+        for var in modele:
+
+            if var <= 0:
+                continue
+
+            ligne, colonne, num_objet = self.variable_to_cell(var)
+
+            objet = self.num_to_obj_HC(num_objet)
+
+            if (colonne, ligne) not in dictionnaire:
+                dictionnaire[(colonne, ligne)] = []
+
+            dictionnaire[(colonne, ligne)].append(objet)
+
         return dictionnaire
 
     def get_grille_score(self, pos: Position) -> int :
@@ -968,22 +666,6 @@ class Map():
                 map_value = self.get_grille_score((x_adj, y_adj))
                 if map_value >= 0 :
                     self.grille_scores[y_adj][x_adj] = 5
-
-    def nb_known_case(self) -> int :
-        elements = []
-        nb_cases = 0
-        est_deja  = False
-        for el in self.clauses_connues : 
-            if len(el) == 1 :
-                if el[0] > 0 : 
-                    est_deja  = False
-                    for nb in elements :
-                        if nb == el[0] :
-                            est_deja = True
-                    if est_deja == False : 
-                        elements.append(el[0])
-                        nb_cases += 1
-        return nb_cases
     
     def hear_case(self, pos: Position) -> List :
         colonne_x, ligne_y = pos
@@ -999,89 +681,4 @@ class Map():
                     if temp_y != ligne_y or temp_x != colonne_x :
                         coord_cases.append([temp_x, temp_y])
         return coord_cases
-
-    def move_case(self, pos: Position) -> List :
-        colonne_x, ligne_y = pos
-        coord_cases = []
-        ligne_c = ligne_y + 1 
-        colonne_c = colonne_x
-        if ligne_c >= 0 and ligne_c < self.nb_lignes and colonne_c >= 0 and colonne_c < self.nb_colonnes :
-            coord_cases.append([ligne_c, colonne_c])
-        
-        ligne_c = ligne_y - 1 
-        colonne_c = colonne_x
-        if ligne_c >= 0 and ligne_c < self.nb_lignes and colonne_c >= 0 and colonne_c < self.nb_colonnes :
-            coord_cases.append([ligne_c, colonne_c])
-        
-        ligne_c = ligne_y 
-        colonne_c = colonne_x + 1
-        if ligne_c >= 0 and ligne_c < self.nb_lignes and colonne_c >= 0 and colonne_c < self.nb_colonnes :
-            coord_cases.append([ligne_c, colonne_c])
-        
-        ligne_c = ligne_y 
-        colonne_c = colonne_x - 1
-        if ligne_c >= 0 and ligne_c < self.nb_lignes and colonne_c >= 0 and colonne_c < self.nb_colonnes :
-            coord_cases.append([ligne_c, colonne_c])
-        
-        return coord_cases
-
-    def case_safe(self, pos: Position) -> List :
-        colonne_x, ligne_y = pos
-
-        coord_cases = []
-        ligne_c = ligne_y + 1 
-        colonne_c = colonne_x
-        if ligne_c >= 0 and ligne_c < self.nb_lignes and colonne_c >= 0 and colonne_c < self.nb_colonnes :
-            coord_cases.append([ligne_c, colonne_c])
-        ligne_c = ligne_y + 2 
-        colonne_c = colonne_x
-        if ligne_c >= 0 and ligne_c < self.nb_lignes and colonne_c >= 0 and colonne_c < self.nb_colonnes :
-            coord_cases.append([ligne_c, colonne_c])
-        ligne_c = ligne_y + 3 
-        colonne_c = colonne_x
-        if ligne_c >= 0 and ligne_c < self.nb_lignes and colonne_c >= 0 and colonne_c < self.nb_colonnes :
-            coord_cases.append([ligne_c, colonne_c])
-        ligne_c = ligne_y - 1 
-        colonne_c = colonne_x
-        if ligne_c >= 0 and ligne_c < self.nb_lignes and colonne_c >= 0 and colonne_c < self.nb_colonnes :
-            coord_cases.append([ligne_c, colonne_c])
-        ligne_c = ligne_y - 2 
-        colonne_c = colonne_x
-        if ligne_c >= 0 and ligne_c < self.nb_lignes and colonne_c >= 0 and colonne_c < self.nb_colonnes :
-            coord_cases.append([ligne_c, colonne_c])
-        ligne_c = ligne_y - 3 
-        colonne_c = colonne_x
-        if ligne_c >= 0 and ligne_c < self.nb_lignes and colonne_c >= 0 and colonne_c < self.nb_colonnes :
-            coord_cases.append([ligne_c, colonne_c])
-        ligne_c = ligne_y  
-        colonne_c = colonne_x + 1
-        if ligne_c >= 0 and ligne_c < self.nb_lignes and colonne_c >= 0 and colonne_c < self.nb_colonnes :
-            coord_cases.append([ligne_c, colonne_c])
-        ligne_c = ligne_y  
-        colonne_c = colonne_x + 2
-        if ligne_c >= 0 and ligne_c < self.nb_lignes and colonne_c >= 0 and colonne_c < self.nb_colonnes :
-            coord_cases.append([ligne_c, colonne_c])
-        
-        ligne_c = ligne_y  
-        colonne_c = colonne_x + 3
-        if ligne_c >= 0 and ligne_c < self.nb_lignes and colonne_c >= 0 and colonne_c < self.nb_colonnes :
-            coord_cases.append([ligne_c, colonne_c])
-        ligne_c = ligne_y  
-        colonne_c = colonne_x - 1
-        if ligne_c >= 0 and ligne_c < self.nb_lignes and colonne_c >= 0 and colonne_c < self.nb_colonnes :
-            coord_cases.append([ligne_c, colonne_c])
-        ligne_c = ligne_y  
-        colonne_c = colonne_x - 2
-        if ligne_c >= 0 and ligne_c < self.nb_lignes and colonne_c >= 0 and colonne_c < self.nb_colonnes :
-            coord_cases.append([ligne_c, colonne_c])
-        
-        ligne_c = ligne_y  
-        colonne_c = colonne_x - 3
-        if ligne_c >= 0 and ligne_c < self.nb_lignes and colonne_c >= 0 and colonne_c < self.nb_colonnes :
-            coord_cases.append([ligne_c, colonne_c])
-        return coord_cases
 #-----------------------------Class Map--------------------------------------------
-
-
-    
-    

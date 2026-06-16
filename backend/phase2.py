@@ -14,13 +14,62 @@ Model = List[Literal]
 Position = List[int] # position x y
 Orientation = str #N,E,S,O
 
+#-----------------------------Class Phase2------------------------------------------------
 class Phase2() :
     def __init__(self) -> None :
         self.hitman = HitmanReferee()
         self.state = self.hitman.start_phase2()
+
         self.delay = 0.1
         self.last_update = time.time()
+        self.done = False
 
+    def init_phase2(self) -> None :
+
+        self.goal = "weapon"
+        self.carte = self.matrix_to_dico(self.hitman._HitmanReferee__world)
+        self.target = self.trouver_corde(self.carte)
+
+        self.way = False
+        self.neutra = False
+
+        self.current_action = ""
+
+        # file d'actions à jouer
+        self.actions = []
+
+    def end_phase_2(self) -> Dict :
+        return self.hitman.end_phase2()
+
+    # convert values for nextjs app
+    def convert_cell(self, v: object) -> str :
+        return v.name if hasattr(v, "name") else str(v)
+    
+    def convert_map(self, map_dict: Dict) -> Dict :
+        return {
+            f"{x},{y}" : self.convert_cell(v)
+            for (x, y), v in map_dict.items()
+        }
+
+    def get_state(self) -> Dict :
+        # _, known_cases = self.map.nb_cases_certaines(phase = 2)
+        return {
+            "map" : self.convert_map(self.carte),
+            "nb_lignes" : max(y for _, y in self.carte.keys()) + 1,
+            "nb_colonnes" : max(x for x, _ in self.carte.keys()) + 1,
+            "position" : self.convert_cell(self.state["position"])[1:5],
+            "orientation" : self.convert_cell(self.state["orientation"]),
+            "done" : self.done,
+            "phase" : self.state["phase"],
+            "action" : self.current_action,
+            "known" : []
+        }
+
+    # display map functions
+    def affichage_jeu_phase2(self) -> None :
+        display_map_phase2(self.carte, self.state)
+
+    # phase2 specific gameplay functions
     def trouver_corde(self, carte: Dict) -> Tuple | None :
         for cle, valeur in carte.items() :
             if valeur == HC.PIANO_WIRE :
@@ -73,37 +122,59 @@ class Phase2() :
     def heuristique(self, position: Tuple, target: Tuple) -> int :
         return abs(position[0] - target[0]) + abs(position[1] - target[1])
 
-    def vision_guard(self, position: Tuple, carte: Dict) -> bool :
-        vision = False
-        for i in range(5) :
-            for j in range(5) :
-                posx = position[0] - i + 2
-                posy = position[1] - j + 2
-                try :
-                    case = carte[(posx, posy)]
-                    if "GUARD_" in case.name :
-                        if self.direction((posx, posy), position) in case.name and (posx == position[0] or posy == position[1]) :
-                            #print("ATTENTION UN GARDE REGARDE LA CASE, IL EST EN POSITION X =", posx, ",Y =", posy)
-                            vision = True
-                except :
-                    pass
-        return vision
+    def vision_guard(self, pos, carte):
 
-    def vision_civil(self, position: Tuple, carte: Dict) -> bool :
-        vision = False
-        for i in range(3) :
-            for j in range(3) :
-                posx = position[0] - i + 1
-                posy = position[1] - j + 1
-                try :
-                    case = carte[(posx, posy)]
-                    if "CIVIL_" in case.name :
-                        if self.direction((posx, posy), position) in case.name and (posx == position[0] or posy == position[1]) :
-                            #print("ATTENTION UN CIVIL REGARDE LA CASE, IL EST EN POSITION X =", posx, ",Y =", posy)
-                            vision = True
-                except :
-                    pass
-        return vision
+        for (gx, gy), case in carte.items():
+
+            if "GUARD_" not in case.name:
+                continue
+
+            dx, dy = {
+                HC.GUARD_N: (0, 1),
+                HC.GUARD_S: (0, -1),
+                HC.GUARD_E: (1, 0),
+                HC.GUARD_W: (-1, 0),
+            }[case]
+
+            x, y = gx, gy
+
+            for _ in range(2):
+
+                x += dx
+                y += dy
+
+                if (x, y) not in carte:
+                    break
+
+                if (x, y) == pos:
+                    return True
+
+                if carte[(x, y)] != HC.EMPTY:
+                    break
+
+        return False
+
+    def vision_civil(self, pos, carte):
+
+        for (cx, cy), case in carte.items():
+
+            if "CIVIL_" not in case.name:
+                continue
+
+            if (cx, cy) == pos:
+                return True
+
+            dx, dy = {
+                HC.CIVIL_N: (0, 1),
+                HC.CIVIL_S: (0, -1),
+                HC.CIVIL_E: (1, 0),
+                HC.CIVIL_W: (-1, 0),
+            }[case]
+
+            if (cx + dx, cy + dy) == pos:
+                return True
+
+        return False
 
     def neutra_guard(self, hitman: Tuple, position: Tuple, carte: Dict) -> int :
         if "GUARD_" in carte[(position[0], position[1])].name :
@@ -145,27 +216,24 @@ class Phase2() :
         return self.orientation_choix(pos, final, carte, choix)
 
     def est_position_valide(self, hitman: Tuple, position: Tuple, carte: Dict, maniere: bool, neutra: bool) -> bool :
-        if position not in carte :
+        if position not in carte:
             return False
+
         case = carte[position]
-        if neutra == False :
-            if maniere == False :
-                if case == HC.WALL or "GUARD_" in case.name or self.vision_guard(position, carte) or self.vision_civil(position, carte) :
-                    return False
-                return True
-            else :
-                if case == HC.WALL or "GUARD_" in case.name :
-                    return False
-                return True
-        else :
-            if maniere == False :
-                if case == HC.WALL or self.neutra_guard(hitman, position, carte) == 0 or self.vision_guard(position, carte) or self.vision_civil(position, carte) :
-                    return False
-                return True
-            else :
-                if case == HC.WALL or self.neutra_guard(hitman, position, carte) == 0 :
-                    return False
-                return True
+
+        # mur
+        if case == HC.WALL:
+            return False
+
+        # garde
+        if not neutra and "GUARD_" in case.name:
+            return False
+
+        # garde neutralisable ?
+        if neutra and self.neutra_guard(hitman, position, carte) == 0:
+            return False
+
+        return True
 
     def matrix_to_dico(self, ref: List[List]) -> Dict :
         carte = {}
@@ -173,25 +241,6 @@ class Phase2() :
             for x, cell in enumerate(row) :
                 carte[(x, len(ref) - 1 - y)] = cell
         return carte
-
-    def convert_cell(self, v: object) -> str :
-        return v.name if hasattr(v, "name") else str(v)
-
-    def convert_map(self, map_dict: Dict) -> Dict :
-        return {
-            f"{x},{y}" : self.convert_cell(v)
-            for (x, y), v in map_dict.items()
-        }
-
-    def get_state(self) -> Dict :
-
-        return {
-            "map" : self.convert_map(self.carte),
-            "position" : self.convert_cell(str(self.state["position"]))[1:5],
-            "orientation" : self.convert_cell(self.state["orientation"]),
-            "done" : self.done,
-            "phase" : self.state["phase"]
-        }
 
     def set_objectif(self) -> None :
 
@@ -222,7 +271,7 @@ class Phase2() :
             self.state = self.hitman.take_weapon()
 
             if self.state["has_weapon"] :
-
+                print("aller tuer la cible")
                 self.target = self.trouver_cible(self.carte)
                 self.goal = "target"
                 if self.state["has_suit"] :
@@ -277,71 +326,7 @@ class Phase2() :
             self.done = True
             return
 
-    def init_phase2(self) -> None :
-
-        self.goal = "weapon"
-
-        self.carte = self.matrix_to_dico(self.hitman._HitmanReferee__world)
-
-        self.target = self.trouver_corde(self.carte)
-
-        self.way = False
-        self.neutra = False
-
-        self.done = False
-
-        # file d'actions à jouer
-        self.actions = []
-
-    def execute_action(self, action: str) -> None :
-
-        actions = {
-            "hr.move()" : self.hitman.move,
-            "hr.turn_clockwise()" : self.hitman.turn_clockwise,
-            "hr.turn_anti_clockwise()" : self.hitman.turn_anti_clockwise,
-            "hr.neutralize_guard()" : self.hitman.neutralize_guard,
-        }
-        print(f"action jouée : {action}")
-        self.state = actions[action]()
-        self.carte = self.matrix_to_dico(self.hitman._HitmanReferee__world)
-
-    def prepare_actions(self) -> None :
-
-        self.set_objectif()
-        path = self.build_path()
-
-        if path is None:
-            self.handle_no_path()
-            return
-
-        self.actions = self.build_actions_from_path(path)
-
-    def step(self) -> Dict :
-
-        now = time.time()
-        if self.done :
-            return self.get_state()
-        
-        if now - self.last_update < self.delay :
-            return self.get_state()
-
-        # Plus d'actions à jouer ?
-        if len(self.actions) == 0 :
-
-            self.prepare_actions()
-
-            if len(self.actions) == 0 :
-                self.done = True
-                return self.get_state()
-
-        action = self.actions.pop(0)
-
-        self.execute_action(action)
-        self.last_update = now
-
-        return self.get_state()
-
-    def build_path(self) -> None :
+    def build_path(self) -> List | None :
 
         position = self.state["position"]
         priority = []
@@ -375,9 +360,17 @@ class Phase2() :
                 ) :
 
                     new_path = path + [new_pos]
+                    cost = len(new_path)
+
+                    if self.vision_guard(new_pos, self.carte) :
+                        cost += 5
+
+                    if self.vision_civil(new_pos, self.carte) :
+                        cost += 1
+
                     heapq.heappush(
                         priority,
-                        (self.heuristique(new_pos, self.target) + len(new_path), new_pos, new_path)
+                        (self.heuristique(new_pos, self.target) + cost, new_pos, new_path)
                     )
 
         return None
@@ -421,3 +414,57 @@ class Phase2() :
             self.goal = "suit"
             self.way = True
             self.neutra = True
+
+    def prepare_actions(self) -> None :
+
+        self.set_objectif()
+        path = self.build_path()
+        print("path", path)
+
+        if path is None:
+            self.handle_no_path()
+            return
+
+        self.actions = self.build_actions_from_path(path)
+
+    def execute_action(self, action: str) -> None :
+
+        actions = {
+            "hr.move()" : self.hitman.move,
+            "hr.turn_clockwise()" : self.hitman.turn_clockwise,
+            "hr.turn_anti_clockwise()" : self.hitman.turn_anti_clockwise,
+            "hr.neutralize_guard()" : self.hitman.neutralize_guard,
+        }
+        print(f"action jouée : {action}")
+        self.state = actions[action]()
+        self.current_action  = action[3:].replace("()", "  ")
+
+    def step(self) -> Dict :
+
+        print("GOAL =", self.goal, "| WAY =", self.way, "| NEUTRA =", self.neutra)
+
+        now = time.time()
+        if self.done :
+            return self.get_state()
+        
+        if now - self.last_update < self.delay :
+            return self.get_state()
+
+        # Plus d'actions à jouer ?
+        if len(self.actions) == 0 :
+
+            self.prepare_actions()
+
+            if len(self.actions) == 0 :
+                self.done = True
+                return self.get_state()
+
+        action = self.actions.pop(0)
+
+        self.execute_action(action)
+        self.carte = self.matrix_to_dico(self.hitman._HitmanReferee__world)
+
+        self.last_update = now
+        self.affichage_jeu_phase2()
+
+        return self.get_state()
