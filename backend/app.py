@@ -1,6 +1,6 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
-from phase12 import Phase1
+from phase1 import Phase1
 from phase2 import Phase2
 
 

@@ -13,13 +13,13 @@ def main():
         time.sleep(0.5)
         
 
-    # affiche_star_2()
-    # phase2 = Phase2()
-    # phase2.init_phase2()
-    # while not phase2.done :
-    #     phase2.step()
-    #     phase2.affichage_jeu_phase2()
-    #     time.sleep(0.5)
+    affiche_star_2()
+    phase2 = Phase2()
+    phase2.init_phase2()
+    while not phase2.done :
+        phase2.step()
+        phase2.affichage_jeu_phase2()
+        time.sleep(0.5)
 
 if __name__ == "__main__":
     main()

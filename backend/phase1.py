@@ -1,6 +1,7 @@
 from map import Map, exactly_number, at_most_number, at_least_one, display_map_phase1
 from hitman.hitman import HitmanReferee, HC
 from typing import List, Dict, Tuple
+from pysat.card import CardEnc, EncType
 import time
 import copy
 import heapq
@@ -52,8 +53,8 @@ class Phase1():
         dictionnaire =  self.map.known_Map()
         self.hitman.send_content(dictionnaire)
         _, score, _, true_map = self.hitman.end_phase1()
-        print(score)
-        print(true_map)
+        # print(score)
+        # print(true_map)
         return dictionnaire
     
     # convert values for nextjs app
@@ -193,7 +194,7 @@ class Phase1():
                 is_a_personne = True # detect a person
                 cases_vues = self.case_guard_vis(coord_case[0], coord_case[1], element)
 
-                print(f"vision du garde ({coord_case[0]},{coord_case[1]}) : {cases_vues}")
+                # print(f"vision du garde ({coord_case[0]},{coord_case[1]}) : {cases_vues}")
 
                 clause_type = self.map.var_guard(coord_case) # clause de guard
                 self.map.sat.add_clause(clause_type)
@@ -220,7 +221,7 @@ class Phase1():
                 is_a_personne = True
                 cases_vues = self.case_civil_vis(coord_case[0], coord_case[1], element)
 
-                print(f"vision du civil ({coord_case[0]},{coord_case[1]}) : {cases_vues}")
+                # print(f"vision du civil ({coord_case[0]},{coord_case[1]}) : {cases_vues}")
 
                 clause_type = self.map.var_civil(coord_case) # clause de civil
                 self.map.sat.add_clause(clause_type) # ajout de la clause
@@ -252,8 +253,8 @@ class Phase1():
 
             self.map.sat.add_clause(clause_personne)
 
-            print(f"{element} en ({coord_case[0]}, {coord_case[1]})", end="|")
-        print()
+            # print(f"{element} en ({coord_case[0]}, {coord_case[1]})", end="|")
+        # print()
             
         return nb_cases_visible
 
@@ -311,14 +312,17 @@ class Phase1():
 
             # personne certaine
             if result_p and not result_non_p :
+                # print("PERSON AT", coord)
                 personnes_connues += 1
 
             # personne impossible
             elif (not result_p) and result_non_p :
+                # print("IMPOSSIBLE AT", coord)
                 continue
 
             # inconnu
             else:
+                # print("ITS A GUARD ZONE", guard_zone)
                 # priorité aux cases dans guard_zone
                 if coord in guard_zone:
                     variables_inconnues.insert(0, v_personne)  # priorité haute
@@ -326,6 +330,7 @@ class Phase1():
                     variables_inconnues.append(v_personne)
 
         reste = nb_personne_entendue - personnes_connues
+        # print("reste", reste, "nb_personne_entendue", nb_personne_entendue, "personnes_connues", personnes_connues)
 
         if reste < 0 :
             raise Exception("hear incohérent avec les connaissances SAT")
@@ -335,10 +340,16 @@ class Phase1():
                 self.map.sat.add_clause([-v])
             return
 
-        if variables_inconnues :
-            clauses = exactly_number(variables_inconnues, reste)
+        # print("variables_inconnues", variables_inconnues)
 
-            for clause in clauses :
+        if variables_inconnues:
+            cnf = CardEnc.equals(
+                lits=variables_inconnues,
+                bound=reste,
+                vpool=self.map.vpool,
+                encoding=EncType.seqcounter
+            )
+            for clause in cnf.clauses:
                 self.map.sat.add_clause(clause)
 
     #=================================================================================
@@ -381,11 +392,11 @@ class Phase1():
             score -= 20
         # personne possible
         if self.map.case_maybe_personne(pos):
-            print("MAYBE PERSON", pos)
+            # print("MAYBE PERSON", pos)
             score -= 15
         # vision connue
         if self.map.case_not_safe(pos):
-            print("NOT SAFE", pos)
+            # print("NOT SAFE", pos)
             score -= 20
 
         score += self.map.get_grille_score(pos)
@@ -444,7 +455,7 @@ class Phase1():
     def build_path_exploration(self) -> List | None :
 
         target = self.choose_frontier()
-        print("target chosen", target)
+        # print("target chosen", target)
 
         if target is None:
             return None
@@ -569,7 +580,7 @@ class Phase1():
     def prepare_actions(self) -> None :
 
         self.current_path = self.build_path_exploration()
-        print("path", self.current_path)
+        # print("path", self.current_path)
 
         self.actions = self.build_actions_from_path(self.current_path)
 
@@ -621,7 +632,7 @@ class Phase1():
     def step(self) -> Dict :
 
         # print("SAT global =", self.map.sat.solve([]))
-        print(self.map.grille_scores)
+        # print(self.map.grille_scores)
 
         if self.map.early_stopping() :
             self.done = True

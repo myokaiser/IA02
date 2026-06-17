@@ -6,6 +6,7 @@ import os
 from hitman.hitman import HC 
 from pysat.solvers import Glucose3
 from pysat.card import CardEnc, EncType
+from pysat.formula import IDPool
 
 Grid = List[List[int]] 
 PropositionnalVariable = int
@@ -157,6 +158,40 @@ def all_cases_certaines(nb_lignes, nb_colonnes) -> List :
     return which
 
 #-----------------------------AFFICHAGE MAP------------------------------------------------
+
+#-----------------------------FONCTIONS DE FICHIER--------------------------------------------
+def clauses_to_dimacs(clauses: ClauseBase, nb_vars: int) -> str:
+    dimacs = str()
+    nb_clauses = 0
+    for clause in clauses : 
+        for el in clause : 
+            dimacs += str(el) + " "
+        dimacs += "0\n"
+        nb_clauses += 1
+    result = 'p cnf ' + str(nb_vars) +' '+ str(nb_clauses) + '\n' + dimacs
+    return result
+
+def write_dimacs_file(dimacs: str, filename: str):
+    with open(filename, "w", newline="") as cnf:
+        cnf.write(dimacs)
+
+def clean_file():
+    os.remove("cnf_directory/known_case.cnf")
+
+def exec_gophersat(filename: str, cmd: str = "./gophersat.exe", encoding: str = "utf8") -> Tuple[bool, List[int]]:
+    result = subprocess.run(
+        [cmd, filename], capture_output=True, check=True, encoding=encoding
+    )
+    string = str(result.stdout)
+    lines = string.splitlines()
+    if lines[1] != "s SATISFIABLE":
+        return False, []
+
+    model = lines[2][2:-2].split(" ")
+
+    return True, [int(x) for x in model]
+#-----------------------------FONCTIONS DE FICHIER--------------------------------------------
+
 
 #-----------------------------FONCTIONS SUR LES CONTRAINTES--------------------------------------------
 
@@ -317,174 +352,193 @@ class Map():
 
         print("gardes", self.nb_gardes, ", civils", self.nb_civils)
 
-        file_path = "base_sat.pkl"
+        # Calcule le plus grand ID utilisé par cell_to_variable
+        max_var = max(
+            self.cell_to_variable(y, x, v)
+            for y in range(self.nb_lignes)
+            for x in range(self.nb_colonnes)
+            for v in [self.rien, self.mur, self.corde, self.costume,
+                    self.cible, self.personne, self.guard, self.civil,
+                    self.north, self.south, self.east, self.west]
+        )
+
+        self.vpool = IDPool(occupied=[[1, max_var]])
         clauses = []
 
-        if os.path.isfile(file_path):
-            with open(file_path, "rb") as f:
-                clauses = pickle.load(f)
+        # =====================================================
+        # 1) EXACTLY ONE TYPE PAR CASE
+        # =====================================================
+        types_case = [
+            self.rien,
+            self.mur,
+            self.corde,
+            self.costume,
+            self.cible,
+            self.personne
+        ]
 
-            for clause in clauses:
-                self.sat.add_clause(clause)
-        else :
-            # =====================================================
-            # EXACTEMENT UNE NATURE PAR CASE
-            # =====================================================
-            nature_variables = [
-                self.rien,
-                self.mur,
-                self.corde,
-                self.costume,
-                self.cible,
-                self.personne
-            ]
+        for y in range(self.nb_lignes):
+            for x in range(self.nb_colonnes):
 
-            for y in range(self.nb_lignes):
-                for x in range(self.nb_colonnes):
+                lits = [
+                    self.cell_to_variable(y, x, t)
+                    for t in types_case
+                ]
 
-                    vars_case = [
-                        self.cell_to_variable(y, x, v)
-                        for v in nature_variables
-                    ]
-                    clauses.extend(exactly_number(vars_case, 1))
-
-            # =====================================================
-            # OBJETS UNIQUES SUR LA CARTE
-            # =====================================================
-            for variable in [
-                self.corde,
-                self.costume,
-                self.cible
-            ]:
-                vars_objet = []
-                for y in range(self.nb_lignes):
-                    for x in range(self.nb_colonnes):
-
-                        vars_objet.append(
-                            self.cell_to_variable(y, x, variable)
-                        )
-
-                clauses.extend(
-                    exactly_number(vars_objet, 1)
+                cnf = CardEnc.equals(
+                    lits=lits,
+                    bound=1,
+                    vpool=self.vpool,
+                    encoding=EncType.seqcounter
                 )
 
-            # =====================================================
-            # PERSONNE <-> GUARD/CIVIL
-            # =====================================================
-            for y in range(self.nb_lignes):
-                for x in range(self.nb_colonnes):
+                clauses.extend(cnf.clauses)
 
-                    personne = self.cell_to_variable(y, x, self.personne)
-                    guard = self.cell_to_variable( y, x, self.guard)
-                    civil = self.cell_to_variable(y, x, self.civil)
+        # =====================================================
+        # 2) OBJETS UNIQUES
+        # =====================================================
+        uniques = [self.corde, self.costume, self.cible]
 
-                    # guard -> personne
-                    clauses.append([-guard, personne])
+        for obj in uniques:
 
-                    # civil -> personne
-                    clauses.append([-civil, personne])
+            lits = [
+                self.cell_to_variable(y, x, obj)
+                for y in range(self.nb_lignes)
+                for x in range(self.nb_colonnes)
+            ]
 
-                    # personne -> guard ou civil
-                    clauses.append([-personne, guard, civil])
-
-                    # pas les deux
-                    clauses.append([-guard, -civil])
-
-            # =====================================================
-            # ORIENTATIONS
-            # =====================================================
-            for y in range(self.nb_lignes):
-                for x in range(self.nb_colonnes):
-
-                    personne = self.cell_to_variable(y, x, self.personne)
-                    guard = self.cell_to_variable(y, x, self.guard)
-                    civil = self.cell_to_variable(y, x, self.civil)
-
-                    north = self.cell_to_variable(y, x, self.north)
-                    south = self.cell_to_variable(y, x, self.south)
-                    east = self.cell_to_variable(y, x, self.east)
-                    west = self.cell_to_variable(y, x, self.west)
-
-                    orientation_vars = [north, south, east, west]
-
-                    # guard -> au moins une orientation
-                    clauses.append([-guard, north, south, east, west])
-
-                    # civil -> au moins une orientation
-                    clauses.append([-civil, north, south, east, west])
-
-                    # au plus une orientation
-                    clauses.extend(
-                        at_most_number(orientation_vars, 1)
-                    )
-
-                    # orientation -> personne
-                    for orient in orientation_vars:
-                        clauses.append([-orient, personne])
-
-                    # orientation -> guard ou civil
-                    for orient in orientation_vars:
-                        clauses.append([-orient, guard, civil])
-
-            # =====================================================
-            # NOMBRE TOTAL DE PERSONNES
-            # =====================================================
-            personne_variables = []
-
-            for y in range(self.nb_lignes):
-                for x in range(self.nb_colonnes):
-
-                    personne_variables.append(
-                        self.cell_to_variable(y, x, self.personne)
-                    )
-
-            clauses.extend(
-                exactly_number(personne_variables, self.nb_gardes + self.nb_civils)
+            cnf = CardEnc.equals(
+                lits=lits,
+                bound=1,
+                vpool=self.vpool,
+                encoding=EncType.seqcounter
             )
 
-            # =====================================================
-            # NOMBRE TOTAL DE GUARDS
-            # =====================================================
-            guard_variables = []
+            clauses.extend(cnf.clauses)
 
-            for y in range(self.nb_lignes):
-                for x in range(self.nb_colonnes):
+        # =====================================================
+        # 3) PERSONNE ⇔ ROLE (guard XOR civil)
+        # =====================================================
+        for y in range(self.nb_lignes):
+            for x in range(self.nb_colonnes):
 
-                    guard_variables.append(
-                        self.cell_to_variable(y, x, self.guard)
-                    )
+                p = self.cell_to_variable(y, x, self.personne)
+                g = self.cell_to_variable(y, x, self.guard)
+                c = self.cell_to_variable(y, x, self.civil)
 
-            clauses.extend(
-                exactly_number(guard_variables, self.nb_gardes)
-            )
+                # guard → personne
+                clauses.append([-g, p])
 
-            # =====================================================
-            # NOMBRE TOTAL DE CIVILS
-            # =====================================================
-            civil_variables = []
+                # civil → personne
+                clauses.append([-c, p])
 
-            for y in range(self.nb_lignes):
-                for x in range(self.nb_colonnes):
+                # pas les deux
+                clauses.append([-g, -c])
 
-                    civil_variables.append(
-                        self.cell_to_variable(y, x, self.civil)
-                    )
+                # personne → guard OR civil
+                clauses.append([-p, g, c])
 
-            clauses.extend(
-                exactly_number(civil_variables, self.nb_civils)
-            )
+        # =====================================================
+        # 4) ORIENTATIONS
+        # =====================================================
+        for y in range(self.nb_lignes):
+            for x in range(self.nb_colonnes):
 
-            # =====================================================
-            # ENREGISTREMENT
-            # =====================================================
-            for clause in clauses:
-                self.sat.add_clause(clause)
+                p = self.cell_to_variable(y, x, self.personne)
+                g = self.cell_to_variable(y, x, self.guard)
+                c = self.cell_to_variable(y, x, self.civil)
+
+                n = self.cell_to_variable(y, x, self.north)
+                s = self.cell_to_variable(y, x, self.south)
+                e = self.cell_to_variable(y, x, self.east)
+                w = self.cell_to_variable(y, x, self.west)
+
+                orient = [n, s, e, w]
+
+                # guard → at least one orientation
+                clauses.append([-g, n, s, e, w])
+
+                # civil → at least one orientation
+                clauses.append([-c, n, s, e, w])
+
+                # at most one orientation
+                cnf = CardEnc.atmost(
+                    lits=orient,
+                    bound=1,
+                    vpool=self.vpool,
+                    encoding=EncType.seqcounter
+                )
+                clauses.extend(cnf.clauses)
+
+                # orientation → personne
+                for o in orient:
+                    clauses.append([-o, p])
+
+        # =====================================================
+        # 5) TOTAL PERSONNES
+        # =====================================================
+        personne_vars = [
+            self.cell_to_variable(y, x, self.personne)
+            for y in range(self.nb_lignes)
+            for x in range(self.nb_colonnes)
+        ]
+
+        cnf = CardEnc.equals(
+            lits=personne_vars,
+            bound=self.nb_gardes + self.nb_civils,
+            vpool=self.vpool,
+            encoding=EncType.seqcounter
+        )
+
+        clauses.extend(cnf.clauses)
+
+        # =====================================================
+        # 6) TOTAL GUARDS
+        # =====================================================
+        guard_vars = [
+            self.cell_to_variable(y, x, self.guard)
+            for y in range(self.nb_lignes)
+            for x in range(self.nb_colonnes)
+        ]
+
+        cnf = CardEnc.equals(
+            lits=guard_vars,
+            bound=self.nb_gardes,
+            vpool=self.vpool,
+            encoding=EncType.seqcounter
+        )
+
+        clauses.extend(cnf.clauses)
+
+        # =====================================================
+        # 7) TOTAL CIVILS
+        # =====================================================
+        civil_vars = [
+            self.cell_to_variable(y, x, self.civil)
+            for y in range(self.nb_lignes)
+            for x in range(self.nb_colonnes)
+        ]
+
+        cnf = CardEnc.equals(
+            lits=civil_vars,
+            bound=self.nb_civils,
+            vpool=self.vpool,
+            encoding=EncType.seqcounter
+        )
+
+        clauses.extend(cnf.clauses)
+
+        # =====================================================
+        # 8) LOAD INTO SOLVER
+        # =====================================================
+        for clause in clauses:
+            self.sat.add_clause(clause)
 
             if not self.sat.check():
-                raise Exception("Init UNSAT")
+                print(clause)
+                raise Exception("Init UNSAT (model inconsistent)")
 
-            with open(file_path, "wb") as f:
-                pickle.dump(clauses, f)
+        print("INIT SAT OK")
 
     def is_true(self, var: PropositionnalVariable) -> bool :
 
@@ -614,13 +668,16 @@ class Map():
     def case_not_safe(self, pos: Position) -> bool :
         return pos in self.dangerous_cases
 
-    def known_Map(self) -> Dict :
+    def known_Map(self) -> Dict:
 
         if not self.sat.solve():
             print("KNOWN MAP SAT global = False")
             return {}
 
         modele = self.sat.model()
+
+        # Borne max des variables "métier"
+        max_var_metier = self.nb_lignes * self.nb_colonnes * self.nb_variables
 
         dictionnaire = {}
 
@@ -629,8 +686,11 @@ class Map():
             if var <= 0:
                 continue
 
-            ligne, colonne, num_objet = self.variable_to_cell(var)
+            # ← NOUVEAU : ignorer les variables auxiliaires de CardEnc
+            if var > max_var_metier:
+                continue
 
+            ligne, colonne, num_objet = self.variable_to_cell(var)
             objet = self.num_to_obj_HC(num_objet)
 
             if (colonne, ligne) not in dictionnaire:
