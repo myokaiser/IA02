@@ -11,7 +11,7 @@ def main():
         phase1.step()
         phase1.affichage_jeu_phase1()
         time.sleep(0.5)
-        break
+        
 
     # affiche_star_2()
     # phase2 = Phase2()

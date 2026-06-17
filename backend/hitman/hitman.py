@@ -97,14 +97,14 @@ class HC(Enum):
 #     [HC.EMPTY,   HC.WALL,    HC.EMPTY,   HC.PIANO_WIRE,HC.EMPTY,      HC.EMPTY,       HC.EMPTY],
 # ]
 
-world_example = [
-    [HC.EMPTY,   HC.WALL,    HC.WALL,    HC.SUIT,      HC.WALL,       HC.EMPTY,       HC.EMPTY],
-    [HC.EMPTY,   HC.EMPTY,   HC.EMPTY,   HC.EMPTY,     HC.WALL,       HC.CIVIL_N,     HC.EMPTY],
-    [HC.TARGET,  HC.WALL,    HC.EMPTY,   HC.EMPTY,     HC.EMPTY,      HC.WALL,        HC.EMPTY],
-    [HC.WALL,    HC.WALL,    HC.EMPTY,   HC.GUARD_E,   HC.EMPTY,      HC.CIVIL_W,     HC.EMPTY],
-    [HC.GUARD_W, HC.EMPTY,   HC.WALL,    HC.EMPTY,     HC.EMPTY,      HC.EMPTY,       HC.EMPTY],
-    [HC.EMPTY,   HC.EMPTY,   HC.EMPTY,   HC.PIANO_WIRE,HC.WALL,       HC.EMPTY,       HC.EMPTY],
-]
+# world_example = [
+#     [HC.EMPTY,   HC.WALL,    HC.WALL,    HC.SUIT,      HC.WALL,       HC.EMPTY,       HC.EMPTY],
+#     [HC.EMPTY,   HC.EMPTY,   HC.EMPTY,   HC.EMPTY,     HC.WALL,       HC.CIVIL_N,     HC.EMPTY],
+#     [HC.TARGET,  HC.WALL,    HC.EMPTY,   HC.EMPTY,     HC.EMPTY,      HC.WALL,        HC.EMPTY],
+#     [HC.WALL,    HC.WALL,    HC.EMPTY,   HC.GUARD_E,   HC.EMPTY,      HC.CIVIL_W,     HC.EMPTY],
+#     [HC.GUARD_W, HC.EMPTY,   HC.WALL,    HC.EMPTY,     HC.EMPTY,      HC.EMPTY,       HC.EMPTY],
+#     [HC.EMPTY,   HC.EMPTY,   HC.EMPTY,   HC.PIANO_WIRE,HC.WALL,       HC.EMPTY,       HC.EMPTY],
+# ]
 
 # world_example = [
 #     [HC.TARGET,  HC.WALL,    HC.WALL,    HC.SUIT,      HC.WALL,       HC.EMPTY,       HC.EMPTY],
@@ -115,14 +115,14 @@ world_example = [
 #     [HC.EMPTY,   HC.EMPTY,   HC.EMPTY,   HC.PIANO_WIRE,HC.WALL,       HC.EMPTY,       HC.EMPTY],
 # ]
 
-# world_example = [
-#     [HC.EMPTY,  HC.EMPTY,   HC.EMPTY,   HC.SUIT,    HC.GUARD_S, HC.WALL,        HC.WALL],
-#     [HC.EMPTY,  HC.WALL,    HC.EMPTY,   HC.EMPTY,   HC.EMPTY,   HC.EMPTY,       HC.EMPTY],
-#     [HC.TARGET, HC.WALL,    HC.EMPTY,   HC.EMPTY,   HC.EMPTY,   HC.CIVIL_N,     HC.EMPTY],
-#     [HC.WALL,   HC.WALL,    HC.EMPTY,   HC.GUARD_E, HC.EMPTY,   HC.CIVIL_W,     HC.CIVIL_E],
-#     [HC.EMPTY,  HC.EMPTY,   HC.EMPTY,   HC.EMPTY,   HC.EMPTY,   HC.EMPTY,       HC.EMPTY],
-#     [HC.EMPTY,  HC.EMPTY,   HC.WALL,    HC.WALL,    HC.EMPTY,   HC.PIANO_WIRE,  HC.EMPTY],
-# ]
+world_example = [
+    [HC.EMPTY,  HC.EMPTY,   HC.EMPTY,   HC.SUIT,    HC.GUARD_S, HC.WALL,        HC.WALL],
+    [HC.EMPTY,  HC.WALL,    HC.EMPTY,   HC.EMPTY,   HC.EMPTY,   HC.EMPTY,       HC.EMPTY],
+    [HC.TARGET, HC.WALL,    HC.EMPTY,   HC.EMPTY,   HC.EMPTY,   HC.CIVIL_N,     HC.EMPTY],
+    [HC.WALL,   HC.WALL,    HC.EMPTY,   HC.GUARD_E, HC.EMPTY,   HC.CIVIL_W,     HC.CIVIL_E],
+    [HC.EMPTY,  HC.EMPTY,   HC.EMPTY,   HC.EMPTY,   HC.EMPTY,   HC.EMPTY,       HC.EMPTY],
+    [HC.EMPTY,  HC.EMPTY,   HC.WALL,    HC.WALL,    HC.EMPTY,   HC.PIANO_WIRE,  HC.EMPTY],
+]
 
 class HitmanReferee:
     def __init__(self, filename: str = ""):

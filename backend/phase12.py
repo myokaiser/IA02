@@ -201,9 +201,8 @@ class Phase1():
                 self.map.sat.add_clause(clause_not_type) # ajout de la clause
 
                 for case in cases_vues : 
-                    clause_safe = self.map.var_not_safe(case)
-                    self.map.sat.add_clause(clause_safe)
                     self.map.set_grille_score(case, -10)
+                    self.map.add_dangerous_case(case)
 
                 if element == HC.GUARD_E : 
                     clause_orientation = self.map.var_east(coord_case)
@@ -229,8 +228,6 @@ class Phase1():
                 self.map.sat.add_clause(clause_not_type) # ajout de la clause
 
                 for case in cases_vues : 
-                    clause_safe = self.map.var_not_safe(case)
-                    self.map.sat.add_clause(clause_safe)
                     self.map.set_grille_score(case, -10)
 
                 if element == HC.CIVIL_E : 
@@ -322,7 +319,6 @@ class Phase1():
 
             # inconnu
             else:
-                print("guard_zone", guard_zone)
                 # priorité aux cases dans guard_zone
                 if coord in guard_zone:
                     variables_inconnues.insert(0, v_personne)  # priorité haute
@@ -385,10 +381,12 @@ class Phase1():
             score -= 20
         # personne possible
         if self.map.case_maybe_personne(pos):
+            print("MAYBE PERSON", pos)
             score -= 15
         # vision connue
         if self.map.case_not_safe(pos):
-            score -= 10
+            print("NOT SAFE", pos)
+            score -= 20
 
         score += self.map.get_grille_score(pos)
 
@@ -436,10 +434,10 @@ class Phase1():
             cost += 3
 
         if self.map.case_maybe_personne(pos):
-            cost += 5
+            cost += 10
 
         if self.map.case_not_safe(pos):
-            cost += 5
+            cost += 10
 
         return cost
     
@@ -609,6 +607,9 @@ class Phase1():
 
         if self.map.case_personne(next_pos) :
             return False
+
+        if self.map.case_not_safe(next_pos) : # if not safe, recompute path
+            return False
         
         if len(self.current_path) > 0 : # if target can be defined, no need to go on it
             current_target = self.current_path[-1]
@@ -620,7 +621,7 @@ class Phase1():
     def step(self) -> Dict :
 
         # print("SAT global =", self.map.sat.solve([]))
-        # print(self.map.grille_scores)
+        print(self.map.grille_scores)
 
         if self.map.early_stopping() :
             self.done = True

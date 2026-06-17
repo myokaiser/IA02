@@ -5,6 +5,7 @@ import pickle
 import os
 from hitman.hitman import HC 
 from pysat.solvers import Glucose3
+from pysat.card import CardEnc, EncType
 
 Grid = List[List[int]] 
 PropositionnalVariable = int
@@ -215,7 +216,7 @@ class Map():
         self.nb_cases_a_trouver = int(n*m*0.95)
 
         self.cases_connues = []
-        self.nb_variables = 13
+        self.nb_variables = 12
         self.rien = 0
         self.mur = 1
         self.corde = 2
@@ -232,8 +233,6 @@ class Map():
         self.east  = 10
         self.west  = 11
 
-        self.safe = 12
-
         self.nb_gardes = nb_gardes
         self.nb_civils = nb_civils
         self.nb_var_prop = self.nb_lignes * self.nb_colonnes * self.nb_variables
@@ -243,6 +242,8 @@ class Map():
         self.sat = SATEngine()
 
         self.init_var_Map()
+
+        self.dangerous_cases = []
 
     def num_to_obj_HC(self, num: int) -> object :
         if num == 0 : 
@@ -300,17 +301,21 @@ class Map():
         return dico
 
     def cell_to_variable(self, y: int, x: int, val: int) -> PropositionnalVariable :
-        return (y + (self.nb_colonnes - 1) * y + x) * self.nb_variables + (val + 1)
+        return (y * self.nb_colonnes + x) * self.nb_variables + (val + 1)
 
     def variable_to_cell(self, var: PropositionnalVariable) -> Tuple[int, int, int] :
-        v = (var - 1) % self.nb_variables
-        var -= v
-        x = int(var / self.nb_variables)
-        i = x // self.nb_colonnes
-        j = x - (i + (self.nb_colonnes - 1) * i)
-        return [i, j, v]
+        var -= 1
+
+        cell_id = var // self.nb_variables
+        value = var % self.nb_variables
+        y = cell_id // self.nb_colonnes
+        x = cell_id % self.nb_colonnes
+
+        return [y, x, value]
     
-    def init_var_Map(self) -> None :
+    def init_var_Map(self) -> None:
+
+        print("gardes", self.nb_gardes, ", civils", self.nb_civils)
 
         file_path = "base_sat.pkl"
         clauses = []
@@ -504,12 +509,6 @@ class Map():
     def var_cible(self, pos: Position) -> List :
         return [self.cell_to_variable(pos[1], pos[0], self.cible)]
 
-    def var_safe(self, pos: Position) -> List :
-        return [self.cell_to_variable(pos[1], pos[0], self.safe)]
-
-    def var_not_safe(self, pos: Position) -> List :
-        return [-self.cell_to_variable(pos[1], pos[0], self.safe)]
-
     def var_personne(self, pos: Position) -> List :
         return [self.cell_to_variable(pos[1], pos[0], self.personne)]
 
@@ -608,15 +607,12 @@ class Map():
         colonne_x, ligne_y = pos
         v = self.var_personne((colonne_x, ligne_y))[0]
         return self.sat.solve(assumptions = [v])
+    
+    def add_dangerous_case(self, pos: Position) :
+        self.dangerous_cases.append(pos)
 
     def case_not_safe(self, pos: Position) -> bool :
-        colonne_x, ligne_y = pos
-        v = self.var_safe((colonne_x, ligne_y))[0]
-
-        result_p = self.sat.solve(assumptions = [v])
-        result_non_p = self.sat.solve(assumptions = [-v])
-
-        return (not result_p) and result_non_p
+        return pos in self.dangerous_cases
 
     def known_Map(self) -> Dict :
 
