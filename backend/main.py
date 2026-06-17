@@ -1,5 +1,5 @@
 from map import affiche_star_2, affiche_star_1
-from phase12 import Phase1
+from phase1 import Phase1
 from phase2 import Phase2
 import time
 
