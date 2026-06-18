@@ -16,8 +16,10 @@ Orientation = str #N,E,S,O
 
 #-----------------------------Class Phase2------------------------------------------------
 class Phase2() :
-    def __init__(self) -> None :
-        self.hitman = HitmanReferee()
+    def __init__(self, map_name="map1") -> None :
+        self.map_name = map_name
+
+        self.hitman = HitmanReferee(map_name)
         self.state = self.hitman.start_phase2()
 
         self.delay = 0.1
