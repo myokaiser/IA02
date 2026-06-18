@@ -24,3 +24,13 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Chrome, Safari */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Firefox */
+.scrollbar-none {
+  scrollbar-width: none;
+}
