@@ -18,8 +18,10 @@ Orientation = str #N,E,S,O
 
 #-----------------------------Class Phase1------------------------------------------------
 class Phase1():
-    def __init__(self) -> None :
-        self.hitman = HitmanReferee()
+    def __init__(self, map_name="map1") -> None :
+        self.map_name = map_name
+
+        self.hitman = HitmanReferee(map_name)
         self.state = self.hitman.start_phase1()
         self.map = Map(
             self.state["m"], # init x
@@ -288,9 +290,15 @@ class Phase1():
                     )
         
         if guard_vars:
-            self.map.sat.add_clause(
-                at_least_one(guard_vars)
+            cnf = CardEnc.atleast(
+                lits=guard_vars,
+                bound=1,
+                vpool=self.map.vpool,
+                encoding=EncType.seqcounter
             )
+
+            for clause in cnf.clauses:
+                self.map.sat.add_clause(clause)
 
         if nb_personne_entendue == 0:
 
