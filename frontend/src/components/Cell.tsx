@@ -51,6 +51,7 @@ export default function Cell({
         transition-all duration-150
         border border-zinc-800
         ${getColor(value)}
+        ${is_known ? "brightness-100" : "brightness-30"}
         ${isPlayer ? "ring-2 ring-green-400 z-10" : ""}
       `}
       style={{
