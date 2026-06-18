@@ -157,6 +157,37 @@ def all_cases_certaines(nb_lignes, nb_colonnes) -> List :
 
     return which
 
+def convert_cell(v: object) -> str :
+    return v.name if hasattr(v, "name") else str(v)
+
+def map_matrix_to_dict(map: List) -> Dict :
+    nb_ligne = len(map)
+    nb_colonne = len(map[0])
+
+    result = {
+        f"{i},{nb_ligne - 1 - j}" : convert_cell(map[j][i])
+        for j in range(nb_ligne)
+        for i in range(nb_colonne)
+     }
+
+    return result
+
+def get_map_next_js(map: List) -> Dict :
+
+    nb_colonne = len(map[0])
+    nb_ligne = len(map)
+    return {
+        "map" : map_matrix_to_dict(map),
+        "nb_lignes" : nb_ligne,
+        "nb_colonnes" : nb_colonne,
+        "position" : "(0, 0)",
+        "orientation" : "N",
+        "done" : True,
+        "phase" : "phase1",
+        "action" : "",
+        "known" : all_cases_certaines(nb_ligne, nb_colonne)
+    }
+
 #-----------------------------AFFICHAGE MAP------------------------------------------------
 
 #-----------------------------FONCTIONS SUR LES CONTRAINTES--------------------------------------------
@@ -216,7 +247,7 @@ class Map():
         self.nb_colonnes = n
         self.nb_cases_a_trouver = int(n*m*0.95)
 
-        self.cases_connues = []
+        self.cases_connues = ["0,0"]
         self.nb_variables = 12
         self.rien = 0
         self.mur = 1
