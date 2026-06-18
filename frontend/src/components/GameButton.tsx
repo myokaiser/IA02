@@ -12,7 +12,7 @@ export default function GameButton() {
       <button
         onClick={handleSignup}
         className={`
-          px-4 py-2 rounded-md font-mono text-sm
+          px-4 py-2 rounded-md font-mono text-sm cursor-pointer
           bg-zinc-700 text-white
         `}
       >
