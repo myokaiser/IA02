@@ -3,9 +3,11 @@ from phase1 import Phase1
 from phase2 import Phase2
 import time
 
+current_map = "map2"
+
 def main():
     affiche_star_1()
-    phase1 = Phase1()
+    phase1 = Phase1(current_map)
     phase1.init_phase1()
     while not phase1.done :
         phase1.step()
@@ -14,7 +16,7 @@ def main():
         
 
     affiche_star_2()
-    phase2 = Phase2()
+    phase2 = Phase2(current_map)
     phase2.init_phase2()
     while not phase2.done :
         phase2.step()
