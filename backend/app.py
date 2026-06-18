@@ -1,16 +1,21 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from phase1 import Phase1
 from phase2 import Phase2
+from maps import load_map
+from map import get_map_next_js
+import os
 
 
 app = Flask(__name__)
 CORS(app)
 
-game_phase1 = Phase1()
+current_map = "map1"
+
+game_phase1 = Phase1(current_map)
 game_phase1.init_phase1()
 
-game_phase2 = Phase2()
+game_phase2 = Phase2(current_map)
 game_phase2.init_phase2()
 
 phase1_end = False
@@ -56,12 +61,15 @@ def state_manual():
 
 @app.post("/reset")
 def reset():
-    global game_phase1, game_phase2, phase1_end
 
-    game_phase1 = Phase1()
+    global game_phase1
+    global game_phase2
+    global phase1_end
+
+    game_phase1 = Phase1(current_map)
     game_phase1.init_phase1()
 
-    game_phase2 = Phase2()
+    game_phase2 = Phase2(current_map)
     game_phase2.init_phase2()
 
     phase1_end = False
@@ -99,6 +107,41 @@ def action(action):
     game_phase1.state = state
 
     return jsonify(game_phase1.convert_state(state))
+
+@app.post("/map")
+def select_map():
+
+    global current_map
+
+    data = request.get_json()
+    current_map = data["map"]
+    print("Current map =", current_map)
+
+    return jsonify({"ok": True})
+
+@app.get("/maps")
+def get_maps():
+
+    maps = []
+    for file in os.listdir("maps"):
+        if file.endswith(".py") and file != "__init__.py":
+            maps.append(
+                file.replace(".py", "")
+            )
+
+    return maps
+
+@app.post("/map-preview")
+def map_preview():
+    data = request.get_json()
+    name = data["map"]
+
+    world = load_map(name)
+    world = get_map_next_js(world)
+
+    return jsonify({
+        "grid": world
+    })
 
 # @app.route("/")
 # def home():
