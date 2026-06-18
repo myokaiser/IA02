@@ -11,6 +11,7 @@ from itertools import product
 from typing import List, Tuple, Dict
 import copy
 import sys
+from maps import load_map
 
 print(f"Hitman Referee v{__version__}", file=sys.stderr)
 print(f"Please make sure you are using the latest version.", file=sys.stderr)
@@ -88,51 +89,20 @@ class HC(Enum):
 
 
 # Provisoire...
-# world_example = [
-#     [HC.EMPTY,   HC.WALL,    HC.EMPTY,   HC.SUIT,      HC.EMPTY,      HC.WALL,        HC.EMPTY],
-#     [HC.EMPTY,   HC.WALL,    HC.EMPTY,   HC.WALL,      HC.EMPTY,      HC.EMPTY,       HC.EMPTY],
-#     [HC.TARGET,  HC.EMPTY,   HC.EMPTY,   HC.EMPTY,     HC.CIVIL_N,    HC.WALL,        HC.EMPTY],
-#     [HC.WALL,    HC.EMPTY,   HC.WALL,    HC.GUARD_E,   HC.EMPTY,      HC.CIVIL_W,     HC.EMPTY],
-#     [HC.EMPTY,   HC.EMPTY,   HC.EMPTY,   HC.EMPTY,     HC.EMPTY,      HC.EMPTY,       HC.EMPTY],
-#     [HC.EMPTY,   HC.WALL,    HC.EMPTY,   HC.PIANO_WIRE,HC.EMPTY,      HC.EMPTY,       HC.EMPTY],
-# ]
 
-# world_example = [
-#     [HC.EMPTY,   HC.WALL,    HC.WALL,    HC.SUIT,      HC.WALL,       HC.EMPTY,       HC.EMPTY],
-#     [HC.EMPTY,   HC.EMPTY,   HC.EMPTY,   HC.EMPTY,     HC.WALL,       HC.CIVIL_N,     HC.EMPTY],
-#     [HC.TARGET,  HC.WALL,    HC.EMPTY,   HC.EMPTY,     HC.EMPTY,      HC.WALL,        HC.EMPTY],
-#     [HC.WALL,    HC.WALL,    HC.EMPTY,   HC.GUARD_E,   HC.EMPTY,      HC.CIVIL_W,     HC.EMPTY],
-#     [HC.GUARD_W, HC.EMPTY,   HC.WALL,    HC.EMPTY,     HC.EMPTY,      HC.EMPTY,       HC.EMPTY],
-#     [HC.EMPTY,   HC.EMPTY,   HC.EMPTY,   HC.PIANO_WIRE,HC.WALL,       HC.EMPTY,       HC.EMPTY],
-# ]
-
-# world_example = [
-#     [HC.TARGET,  HC.WALL,    HC.WALL,    HC.SUIT,      HC.WALL,       HC.EMPTY,       HC.EMPTY],
-#     [HC.EMPTY,   HC.EMPTY,   HC.EMPTY,   HC.EMPTY,     HC.WALL,       HC.EMPTY,       HC.EMPTY],
-#     [HC.EMPTY,   HC.EMPTY,   HC.EMPTY,   HC.EMPTY,     HC.EMPTY,      HC.EMPTY,       HC.EMPTY],
-#     [HC.GUARD_E, HC.EMPTY,   HC.EMPTY,   HC.EMPTY,     HC.EMPTY,      HC.EMPTY,       HC.EMPTY],
-#     [HC.EMPTY,   HC.EMPTY,   HC.EMPTY,   HC.EMPTY,     HC.EMPTY,      HC.EMPTY,       HC.EMPTY],
-#     [HC.EMPTY,   HC.EMPTY,   HC.EMPTY,   HC.PIANO_WIRE,HC.WALL,       HC.EMPTY,       HC.EMPTY],
-# ]
-
-world_example = [
-    [HC.EMPTY,  HC.EMPTY,   HC.EMPTY,   HC.SUIT,    HC.GUARD_S, HC.WALL,        HC.WALL],
-    [HC.EMPTY,  HC.WALL,    HC.EMPTY,   HC.EMPTY,   HC.EMPTY,   HC.EMPTY,       HC.EMPTY],
-    [HC.TARGET, HC.WALL,    HC.EMPTY,   HC.CIVIL_W, HC.EMPTY,   HC.CIVIL_N,     HC.EMPTY],
-    [HC.WALL,   HC.WALL,    HC.EMPTY,   HC.GUARD_E, HC.EMPTY,   HC.CIVIL_W,     HC.CIVIL_E],
-    [HC.EMPTY,  HC.EMPTY,   HC.EMPTY,   HC.EMPTY,   HC.EMPTY,   HC.EMPTY,       HC.EMPTY],
-    [HC.EMPTY,  HC.CIVIL_W, HC.WALL,    HC.WALL,    HC.EMPTY,   HC.PIANO_WIRE,  HC.EMPTY],
-]
+world_example = load_map("map1")
 
 class HitmanReferee:
-    def __init__(self, filename: str = ""):
-        self.__filename = filename
-        if filename == "":
-            self.__world = copy.deepcopy(world_example) # utilisation de la map en liste de liste
-            self.__m = len(world_example) # longueur de la map
-            self.__n = len(world_example[0]) # largueur de la map
-        else:
-            raise NotImplementedError("TODO")
+    def __init__(self, map_name: str):
+
+        self.__filename = map_name
+
+        self.__world = copy.deepcopy(
+            load_map(map_name)
+        )
+
+        self.__m = len(self.__world)
+        self.__n = len(self.__world[0])
 
         self.__civil_count = self.__compute_civil_count()
         self.__guard_count = self.__compute_guard_count()
