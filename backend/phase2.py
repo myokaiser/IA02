@@ -1,4 +1,4 @@
-from map import display_map_phase2, all_cases_certaines
+from map import convert_dangerous_cases, display_map_phase2, all_cases_certaines, all_dangerous_cases
 from hitman.hitman import HC, HitmanReferee
 from pprint import pprint
 from typing import List, Tuple, Dict
@@ -25,6 +25,7 @@ class Phase2() :
         self.delay = 0.1
         self.last_update = time.time()
         self.done = False
+        self.dangerous_cases = all_dangerous_cases(self.hitman._HitmanReferee__world)
 
     def init_phase2(self) -> None :
 
@@ -64,7 +65,8 @@ class Phase2() :
             "done" : self.done,
             "phase" : self.state["phase"],
             "action" : self.current_action,
-            "known" : self.known
+            "known" : self.known,
+            "danger" : convert_dangerous_cases(self.dangerous_cases)
         }
 
     # display map functions
