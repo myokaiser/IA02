@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   fetchState,
   startGame,
@@ -8,43 +8,38 @@ import {
   resetGame,
   sendAction,
 } from "@/src/lib/api";
+import type { GameState } from "@/src/types/game";
 
 export function useGame() {
-    type Data = {
-        map: Record<string, string>,
-        nb_lignes: number,
-        nb_colonnes: number,
-        position: string,
-        orientation: string,
-        done: boolean,
-        phase: number,
-        action: string,
-        known: string[]
-    }
-  const [state, setState] = useState<Data | null>(null);
+  const [state, setState] = useState<GameState | null>(null);
   const [running, setRunning] = useState(false);
   const [mode, setMode] = useState<"ai" | "manual">("ai");
 
-  // 1. LOAD INITIAL STATE ONLY ONCE
+  // LOAD INITIAL STATE ONLY ONCE
   useEffect(() => {
     fetchState(mode).then(setState);
   }, [mode]);
+  // ==============================
 
-  // 2. START SIMULATION
+  // START SIMULATION
   const start = async () => {
     await startGame();
     setRunning(true);
   };
+  // ==============================
 
-  const reset = async () => {
+  // RESET SIMULATION
+  const reset = useCallback(async (currentMode: string) => {
     setRunning(false);
 
     await resetGame();
 
-    const newState = await fetchState(mode);
+    const newState = await fetchState(currentMode);
     setState(newState);
-  };
+  }, []);
+  // ==============================
 
+  // HANDLE HUMAN MODE
   const move = async () => {
     await sendAction("move");
 
@@ -72,21 +67,22 @@ export function useGame() {
     const state = await fetchState(mode);
     setState(state);
   };
+  // ==============================
 
-  // 3. LOOP ONLY WHEN RUNNING
+  // LOOP ONLY WHEN RUNNING
   useEffect(() => {
-  if (!running) return;
+    if (!running) return;
 
-  if (mode !== "ai") return;
+    if (mode !== "ai") return;
 
-  const interval = setInterval(async () => {
-    stepGame()
-    const newState = await fetchState(mode);
-    setState(newState);
+    const interval = setInterval(async () => {
+      stepGame()
+      const newState = await fetchState(mode);
+      setState(newState);
 
-    if (newState.done && newState.phase === 2) {
-      setRunning(false);
-    }
+      if (newState.done && newState.phase === 2) {
+        setRunning(false);
+      }
     }, 400);
 
     return () => clearInterval(interval);
@@ -107,4 +103,5 @@ export function useGame() {
     turnRight,
     kill,
   };
+  // ==============================
 }

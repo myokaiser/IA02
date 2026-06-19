@@ -2,24 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Grid from "@/src/components/Grid";
-
-type Data = {
-    map: Record<string, string>,
-    nb_lignes: number,
-    nb_colonnes: number,
-    position: string,
-    orientation: string,
-    done: boolean,
-    phase: number,
-    action: string,
-    known: string[]
-}
+import EscapeButton from "@/src/components/EscapeButton";
+import type { GameState } from "@/src/types/game";
 
 export default function MapsPage() {
   const [maps, setMaps] = useState<string[]>([]);
   const [selectedMap, setSelectedMap] = useState<string | null>(null);
   const [currentMap, setCurrentMap] = useState<string | null>(null);
-  const [grid, setGrid] = useState<Data | null>(null);
+  const [grid, setGrid] = useState<GameState | null>(null);
 
   const chooseMap = async () => {
     if (!selectedMap) return;
@@ -70,8 +60,8 @@ export default function MapsPage() {
     <div className="flex h-screen bg-zinc-950 text-white">
       {/* SIDEBAR */}
       <div className="w-64 border-r border-zinc-800 p-4">
-        <h1 className="text-lg font-bold mb-4 text-zinc-200">
-          Available Maps
+        <h1 className="text-2xl font-bold tracking-wider mb-4 text-zinc-200">
+          AVAILABLE MAPS
         </h1>
 
         <div className="space-y-2">
@@ -80,8 +70,7 @@ export default function MapsPage() {
               key={m}
               onClick={() => setSelectedMap(m)}
               className={`
-                w-full text-left px-3 py-2 rounded-lg transition
-                hover:bg-zinc-800
+                w-full font-mono text-left px-3 py-2 rounded-lg transition hover:bg-zinc-800  
                 ${
                   selectedMap === m
                     ? "bg-zinc-800 border border-zinc-600"
@@ -97,7 +86,7 @@ export default function MapsPage() {
 
       {/* MAIN */}
       <div className="flex-1 p-6">
-        <h2 className="text-xl font-semibold mb-4 text-zinc-200">
+        <h2 className="text-xl  font-mono font-semibold mb-4 text-zinc-200">
           Preview:{" "}
           <span className="text-zinc-400">
             {selectedMap ?? "No map selected"}
@@ -105,7 +94,7 @@ export default function MapsPage() {
         </h2>
 
         {!grid ? (
-          <div className="text-zinc-500">Loading map...</div>
+          <div className=" font-mono text-zinc-500">Loading map...</div>
         ) : (
           <div className="flex flex-col items-start gap-4">
             <div className="inline-block border border-zinc-800 rounded-lg overflow-hidden">
@@ -117,6 +106,7 @@ export default function MapsPage() {
                         nb_lignes={grid.nb_lignes}
                         nb_colonnes={grid.nb_colonnes}
                         known={grid.known}
+                        danger={grid.danger}
                         size={4}
                     />
                 </div>
@@ -125,21 +115,23 @@ export default function MapsPage() {
             <button
                 onClick={chooseMap}
                 className={`
-                    px-6 py-3 rounded-lg font-semibold transition-colors duration-200
+                     font-mono px-6 py-3 rounded-lg font-semibold transition-colors duration-200
                     ${
-                        currentMap === selectedMap
-                            ? "bg-green-600 hover:bg-green-500"
-                            : "bg-zinc-700 hover:bg-zinc-600"
+                      currentMap === selectedMap
+                        ? "bg-green-600 hover:bg-green-500"
+                        : "bg-zinc-700 hover:bg-zinc-600"
                     }
                 `}
             >
                 {currentMap === selectedMap
-                    ? "Selected Map"
-                    : "Select This Map"}
+                  ? "Selected Map"
+                  : "Select This Map"
+                }
             </button>
         </div>
         )}
       </div>
+      <EscapeButton />
     </div>
   );
 }
