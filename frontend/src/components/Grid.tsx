@@ -8,6 +8,7 @@ type Props = {
   nb_lignes: number;
   nb_colonnes: number;
   known: string[];
+  danger: string[];
   size: GridSize;
 };
 
@@ -18,6 +19,7 @@ export default function Grid({
   nb_lignes,
   nb_colonnes,
   known,
+  danger,
   size = 3,
 }: Props) {
   const config = GRID_SIZES[size] ;
@@ -32,6 +34,7 @@ export default function Grid({
       const key = `${x},${y}`;
       const value = map?.[key];
       const is_known = known.includes(key);
+      const is_danger = danger.includes(key);
 
       const isPlayer =
         position[0] === `${x}` && position[3] === `${y}`;
@@ -43,6 +46,7 @@ export default function Grid({
           isPlayer={isPlayer}
           orientation={orientation}
           is_known={is_known}
+          is_danger={is_danger}
           size={size}
         />
       );

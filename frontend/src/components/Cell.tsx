@@ -5,6 +5,7 @@ type Props = {
   isPlayer: boolean;
   orientation: string;
   is_known: boolean;
+  is_danger: boolean;
   size?: GridSize;
 };
 
@@ -40,6 +41,7 @@ export default function Cell({
   isPlayer,
   orientation,
   is_known,
+  is_danger,
   size = 3,
 }: Props) {
   const config = GRID_SIZES[size];
@@ -47,11 +49,17 @@ export default function Cell({
   return (
     <div
       className={`
-        flex items-center justify-center
-        transition-all duration-150
-        border border-zinc-800
-        ${getColor(value)}
-        ${is_known ? "brightness-100" : "brightness-30"}
+        flex items-center justify-center transition-all duration-150 border border-zinc-800
+        ${
+          is_danger && value && !(value?.startsWith("GUARD") || value?.startsWith("CIVIL") || value === "WALL")
+            ? "bg-yellow-200/90" 
+            : getColor(value)
+        }
+        ${
+          is_known || isPlayer 
+            ? "brightness-100" 
+            : "brightness-30"
+        }
         ${isPlayer ? "ring-2 ring-green-400 z-10" : ""}
       `}
       style={{
