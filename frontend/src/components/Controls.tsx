@@ -21,10 +21,6 @@ export default function Controls({ running, onStart }: Props) {
       >
         {running ? "Running..." : "▶ Start Simulation"}
       </button>
-
-      <div className="text-xs text-zinc-400">
-        {running ? "Agent active" : "Idle"}
-      </div>
     </div>
   );
 }

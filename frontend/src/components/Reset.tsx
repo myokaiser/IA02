@@ -1,17 +1,17 @@
 type Props = {
+  mode: string;
   running: boolean;
-  onStart: () => void;
+  onStart: (currentMode: string) => Promise<void>;
 };
 
-export default function Reset({ running, onStart }: Props) {
+export default function Reset({ mode, running, onStart }: Props) {
   return (
     <div className="flex items-center gap-3">
       <button
-        onClick={onStart}
+        onClick={() => onStart(mode)}
         disabled={running}
         className={`
-          px-4 py-2 rounded-md font-mono text-sm
-          transition
+          px-4 py-2 rounded-md font-mono text-smbtransition
           ${
             running
               ? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
@@ -21,10 +21,6 @@ export default function Reset({ running, onStart }: Props) {
       >
         {running ? "Running..." : "▶ Reset Simulation"}
       </button>
-
-      <div className="text-xs text-zinc-400">
-        {running ? "Agent active" : "Idle"}
-      </div>
     </div>
   );
 }
