@@ -3,7 +3,7 @@ export default function GitHubButton() {
   return (
     <div className="flex items-center gap-3">
       <a
-        href="https://github.com/myokaiser/IA02/tree/web-demo"
+        href="https://github.com/myokaiser/IA02/"
         className="
           px-4 py-2 rounded-md font-mono text-sm transition hover:bg-zinc-800 bg-zinc-700 text-white
         "
