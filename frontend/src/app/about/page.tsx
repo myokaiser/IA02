@@ -553,7 +553,7 @@ export default function MotivationPage() {
           {/* FUTURE */}
           <section
             id="future"
-            className="scroll-mt-20 pb-55"
+            className="scroll-mt-20 pb-70"
           >
             <h2 className="text-4xl font-bold mb-8">
               Future Improvements
