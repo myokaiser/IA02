@@ -2,7 +2,7 @@
 
 import GameButton from "@/src/components/GameButton";
 import SelectMapButton from "@/src/components/SelectMapButton";
-import MotivationButton from "@/src/components/MotivationButton";
+import MotivationButton from "@/src/components/AboutButton";
 import GitHubButton from "@/src/components/GitHubButton";
 
 export default function Home() {
@@ -10,46 +10,41 @@ export default function Home() {
     <main className="h-screen bg-black text-white overflow-hidden">
       <div className="flex flex-col items-center justify-center h-full">
 
-        {/* Titre */}
+        {/* TITLE */}
         <h1 className="
-          scale-[4] origin-center
-          mb-12
-          select-none
+          scale-[6] origin-center mb-6 select-none z-30
         ">
           HITMAN.
         </h1>
 
-        {/* Liste scrollable */}
+        {/* MENU CONTAINER */}
         <div className="relative">
 
-          {/* Fade inférieur */}
+          {/* TOP FADE */}
           <div
             className="
-              pointer-events-none
-              absolute
-              bottom-0
-              left-0
-              right-0
-              h-15
-              bg-gradient-to-b
-              from-transparent
-              to-black
-              z-10
+              pointer-events-none absolute top-0 left-0 right-0 h-24 bg-gradient-to-t from-transparent to-black z-20
             "
           />
 
+          {/* BOTTOM FADE */}
           <div
             className="
-              h-25
-              w-72
-              overflow-y-auto
-              scrollbar-none
-              snap-y
-              snap-mandatory
+              pointer-events-none absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-b from-transparent to-black z-20
+            "
+          />
+
+          {/* SCROLLABLE MENU */}
+          <div
+            className="
+              h-60w-72 overflow-y-auto overscroll-none snap-y snap-mandatory scrollbar-none
             "
           >
-            <div className="flex flex-col items-center gap-1 pb-30">
-
+            <div
+              className="
+                flex flex-col items-center gap-3 pt-24 pb-24
+              "
+            >
               <div className="snap-center">
                 <GameButton />
               </div>
@@ -65,7 +60,6 @@ export default function Home() {
               <div className="snap-center">
                 <GitHubButton />
               </div>
-
             </div>
           </div>
         </div>

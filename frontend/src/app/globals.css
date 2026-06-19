@@ -32,5 +32,10 @@ body {
 
 /* Firefox */
 .scrollbar-none {
+  -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+html {
+  scroll-behavior: smooth;
 }
