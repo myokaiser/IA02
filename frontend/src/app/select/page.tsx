@@ -5,56 +5,53 @@ import Grid from "@/src/components/Grid";
 import EscapeButton from "@/src/components/EscapeButton";
 import type { GameState } from "@/src/types/game";
 
+import {
+  getMaps,
+  getMapPreview,
+  selectMap,
+} from "@/src/lib/api";
+
 export default function MapsPage() {
   const [maps, setMaps] = useState<string[]>([]);
   const [selectedMap, setSelectedMap] = useState<string | null>(null);
   const [currentMap, setCurrentMap] = useState<string | null>(null);
   const [grid, setGrid] = useState<GameState | null>(null);
 
+  useEffect(() => {
+    const load = async () => {
+      const data = await getMaps();
+
+      const sorted = data.sort();
+      setMaps(sorted);
+
+      if (sorted.length > 0) {
+        setSelectedMap(sorted[0]);
+        setCurrentMap(sorted[0]);
+      }
+    };
+
+    load();
+  }, []);
+
+  // fetch available maps
+  useEffect(() => {
+    if (!selectedMap) return;
+
+    const loadPreview = async () => {
+      const data = await getMapPreview(selectedMap);
+      setGrid(data.grid);
+    };
+
+    loadPreview();
+  }, [selectedMap]);
+
+  // fetch selected map preview
   const chooseMap = async () => {
     if (!selectedMap) return;
 
     setCurrentMap(selectedMap);
-
-    await fetch("http://localhost:5000/map", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            map: selectedMap,
-        }),
-    });
-    };
-
-  // fetch available maps
-  useEffect(() => {
-    fetch("http://localhost:5000/maps")
-      .then((res) => res.json())
-      .then((data) => {
-            const sorted = data.sort();
-
-            setMaps(sorted);
-
-            if (sorted.length > 0) {
-                setSelectedMap(sorted[0]);
-                setCurrentMap(sorted[0]);
-            }
-      });
-  }, []);
-
-  // fetch selected map preview
-  useEffect(() => {
-    if (!selectedMap) return;
-
-    fetch("http://localhost:5000/map-preview", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ map: selectedMap }),
-    })
-      .then((res) => res.json())
-      .then((data) => setGrid(data.grid));
-  }, [selectedMap]);
+    await selectMap(selectedMap);
+  };
 
   return (
     <div className="flex h-screen bg-zinc-950 text-white">

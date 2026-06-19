@@ -22,3 +22,30 @@ export async function sendAction(action: string) {
     method: "POST",
   });
 }
+
+export async function getMaps(): Promise<string[]> {
+  const res = await fetch(`${API}/maps`);
+  return res.json();
+}
+
+export async function selectMap(map: string) {
+  return fetch(`${API}/map`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ map }),
+  });
+}
+
+export async function getMapPreview(map: string) {
+  const res = await fetch(`${API}/map-preview`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ map }),
+  });
+
+  return res.json();
+}
