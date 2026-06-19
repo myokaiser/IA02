@@ -1,4 +1,4 @@
-from map import Map, exactly_number, at_most_number, at_least_one, display_map_phase1
+from map import Map, convert_dangerous_cases, display_map_phase1
 from hitman.hitman import HitmanReferee, HC
 from typing import List, Dict, Tuple
 from pysat.card import CardEnc, EncType
@@ -79,7 +79,8 @@ class Phase1():
             "done" : self.done,
             "phase" : self.state["phase"],
             "action" : self.current_action,
-            "known" : self.map.cases_connues
+            "known" : self.map.cases_connues,
+            "danger" : convert_dangerous_cases(self.map.dangerous_cases)
         }
 
     # display map functions
