@@ -1,3 +1,6 @@
+# ----------NOTE---------- #
+This is the original material of the final project of IA02 – Problem Solving and Logic Programming course
+
 Ce fichier a pour objectif d'expliquer brièvement le fonctionnement du projet.
 Vous trouverez également la modélisation SAT et STRIPS à la fin de ce document.
 
