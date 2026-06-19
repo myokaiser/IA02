@@ -185,10 +185,64 @@ def get_map_next_js(map: List) -> Dict :
         "done" : True,
         "phase" : "phase1",
         "action" : "",
-        "known" : all_cases_certaines(nb_ligne, nb_colonne)
+        "known" : all_cases_certaines(nb_ligne, nb_colonne),
+        "danger" : convert_dangerous_cases(all_dangerous_cases(map))
     }
 
 #-----------------------------AFFICHAGE MAP------------------------------------------------
+
+def get_offset(entity: int) -> Tuple[int, int]:
+    if entity in [HC.GUARD_N, HC.CIVIL_N]:
+        return (0, 1)
+    if entity in [HC.GUARD_E, HC.CIVIL_E]:
+        return (1, 0)
+    if entity in [HC.GUARD_S, HC.CIVIL_S]:
+        return (0, -1)
+    if entity in [HC.GUARD_W, HC.CIVIL_W]:
+        return (-1, 0)
+    return (0, 0)
+
+def case_vis(x, y, dx, dy, dist, nb_ligne, nb_colonne):
+    res = []
+    print(f"{x},{y}", end="")
+    for _ in range(dist):
+        x += dx
+        y += dy
+
+        if x < 0 or y < 0 or x >= nb_colonne or y >= nb_ligne:
+            break
+
+        res.append((x, y))
+
+    return res
+
+def all_dangerous_cases(grid):
+    dangerous = []
+
+    nb_ligne = len(grid)
+    nb_colonne = len(grid[0])
+
+    for y in range(nb_ligne):
+        for x in range(nb_colonne):
+
+            cell = grid[y][x]
+
+            if cell in [HC.GUARD_N, HC.GUARD_E, HC.GUARD_S, HC.GUARD_W]:
+                dx, dy = get_offset(cell)
+                res = case_vis(x, nb_ligne - 1 - y, dx, dy, 2, nb_ligne, nb_colonne)
+                dangerous += res
+
+            elif cell in [HC.CIVIL_N, HC.CIVIL_E, HC.CIVIL_S, HC.CIVIL_W]:
+                dx, dy = get_offset(cell)
+                res = case_vis(x, nb_ligne - 1 - y, dx, dy, 1, nb_ligne, nb_colonne)
+                dangerous += res
+
+    return list(set(dangerous))
+
+
+def convert_dangerous_cases(dangerous):
+    res = [f"{x},{y}" for (x, y) in dangerous]
+    return res
 
 #-----------------------------FONCTIONS SUR LES CONTRAINTES--------------------------------------------
 
@@ -590,6 +644,36 @@ class Map():
     def var_west(self, pos: Position) -> List :
         return [self.cell_to_variable(pos[1], pos[0], self.west)]
 
+    def specify_person(self, y, x) :
+
+        natures = [
+            self.civil,
+            self.guard,
+        ]
+
+        for nature in natures:
+            v = self.cell_to_variable(y, x, nature)
+            if self.is_true(v):
+                role = nature
+                break
+
+        orientations = [
+            self.north,
+            self.south,
+            self.west,
+            self.east,
+        ]
+
+        for orientation in orientations:
+            v = self.cell_to_variable(y, x, orientation)
+            if self.is_true(v):
+                look = orientation
+                break
+
+        # print("person ->", role, look)
+
+        return
+
     def case_certaine(self, pos: Position) -> bool :
 
         x, y = pos
@@ -608,6 +692,8 @@ class Map():
             v = self.cell_to_variable(y, x, nature)
 
             if self.is_true(v):
+                if nature == self.personne :
+                    self.specify_person(y, x)
                 return True
 
         return False
