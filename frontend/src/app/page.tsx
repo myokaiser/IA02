@@ -37,7 +37,7 @@ export default function Home() {
           {/* SCROLLABLE MENU */}
           <div
             className="
-              h-60w-72 overflow-y-auto overscroll-none snap-y snap-mandatory scrollbar-none
+              h-60 w-72 overflow-y-auto overscroll-none snap-y snap-mandatory scrollbar-none
             "
           >
             <div
