@@ -6,7 +6,7 @@ from maps import load_map
 from map import get_map_next_js
 import os
 
-
+# INITIALIZE FLASK APP ==
 app = Flask(__name__)
 CORS(app)
 
@@ -19,9 +19,11 @@ game_phase2 = Phase2(current_map)
 game_phase2.init_phase2()
 
 phase1_end = False
+# ========================
 
-@app.route("/state/ai")
-def state_ai():
+
+@app.route("/state/ai") # route for simulation mode
+def state_ai() :
     global phase1_end
     if not phase1_end :
         state = game_phase1.get_state()
@@ -31,33 +33,27 @@ def state_ai():
         state = game_phase2.get_state()
         return jsonify(state)
     
-@app.post("/step")
-def step():
+
+    
+@app.post("/step") # route for taking a step in the simulation
+def step() :
     global game_phase1, phase1_end
 
-    if not phase1_end:
+    if not phase1_end :
         result = game_phase1.step()
         phase1_end = result["done"]
         return jsonify(result)
 
     return jsonify(game_phase2.step())
 
-# @app.route("/state/ai")
-# def state_ai():
 
-#     state = game_phase2.get_state()
-#     return jsonify(state)
-    
-# @app.post("/step")
-# def step():
-#     global game_phase1, phase1_end
 
-#     return jsonify(game_phase2.step())
-
-@app.route("/state/manual")
-def state_manual():
+@app.route("/state/manual") # route for getting the manual state
+def state_manual() :
     global game_phase1
     return jsonify(game_phase1.get_state())
+
+
 
 @app.post("/reset")
 def reset():
@@ -76,31 +72,33 @@ def reset():
 
     return jsonify(game_phase1.get_state())
 
+
+
 @app.post("/action/<action>")
-def action(action):
+def action(action) :
 
     global game_phase1
 
-    if action == "move":
+    if action == "move" :
         state = game_phase1.hitman.move()
         game_phase1.current_action = 'move'
         game_phase1.vision()
         game_phase1.hear()
 
-    elif action == "left":
+    elif action == "left" :
         state = game_phase1.hitman.turn_anti_clockwise()
         game_phase1.current_action = 'turn_anti_clockwise'
 
-    elif action == "right":
+    elif action == "right" :
         state = game_phase1.hitman.turn_clockwise()
         game_phase1.current_action = 'turn_clockwise'
 
-    elif action == "kill":
+    elif action == "kill" :
         state = game_phase1.hitman.kill_target()
         game_phase1.current_action = 'kill'
 
     else:
-        return jsonify({"error": "unknown action"}), 400
+        return jsonify({"error" : "unknown action"}), 400
     
     game_phase1.phase1_list.append((state['position'][0], state['position'][1]))
 
@@ -108,8 +106,10 @@ def action(action):
 
     return jsonify(game_phase1.convert_state(state))
 
+
+
 @app.post("/map")
-def select_map():
+def select_map() :
 
     global current_map
 
@@ -117,13 +117,15 @@ def select_map():
     current_map = data["map"]
     print("Current map =", current_map)
 
-    return jsonify({"ok": True})
+    return jsonify({"ok" : True})
+
+
 
 @app.get("/maps")
-def get_maps():
+def get_maps() :
 
     maps = []
-    for file in os.listdir("maps"):
+    for file in os.listdir("maps") :
         if file.endswith(".py") and file != "__init__.py":
             maps.append(
                 file.replace(".py", "")
@@ -131,8 +133,10 @@ def get_maps():
 
     return maps
 
+
+
 @app.post("/map-preview")
-def map_preview():
+def map_preview() :
     data = request.get_json()
     name = data["map"]
 
@@ -140,12 +144,10 @@ def map_preview():
     world = get_map_next_js(world)
 
     return jsonify({
-        "grid": world
+        "grid" : world
     })
 
-# @app.route("/")
-# def home():
-#     return open("frontend_backup/index.html").read()
 
-if __name__ == "__main__":
-    app.run(debug=True)
+
+if __name__ == "__main__" :
+    app.run(debug = True)

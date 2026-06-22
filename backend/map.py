@@ -1,8 +1,6 @@
 from typing import List, Tuple, Dict
 from itertools import combinations
 import numpy as np
-import pickle
-import os
 from hitman.hitman import HC 
 from pysat.solvers import Glucose3
 from pysat.card import CardEnc, EncType
@@ -14,7 +12,7 @@ Literal = int
 Clause = List[Literal]
 ClauseBase = List[Clause]
 Model = List[Literal]
-Position = List[int]
+Position = Tuple[int, int]
 Orientation = str #N,E,S,O
 
 def affiche_star_1() :
@@ -41,7 +39,7 @@ def affiche_star_2() :
     print(r"-------------------------------------------------------------------------------")
 #-----------------------------AFFICHAGE MAP------------------------------------------------
 
-def display_map_phase1(map: Dict, state: Dict) -> None:
+def display_map_phase1(map: Dict, state: Dict) -> None :
     symbols = {
         HC.EMPTY: " ",
         HC.SUIT: "S",
@@ -65,26 +63,26 @@ def display_map_phase1(map: Dict, state: Dict) -> None:
     max_x = max(x for x, _ in map.keys())
     max_y = max(y for _, y in map.keys())
     print("+-----" * (max_x + 1) + "+")
-    for y in range(max_y, -1, -1):
-        print("|", end="")
-        for x in range(max_x + 1):
-            if (x, y) == state["position"]:
+    for y in range(max_y, -1, -1) :
+        print("|", end = "")
+        for x in range(max_x + 1) :
+            if (x, y) == state["position"] :
                 symbol = symbols[state["orientation"]]
             else:
                 element = map.get((x, y), None)
                 if len(element) == 1 :
                     element = element[0]
-                    if element == HC.PIANO_WIRE:
+                    if element == HC.PIANO_WIRE :
                         symbol = symbols[HC.PIANO_WIRE]
-                    elif element == HC.SUIT:
+                    elif element == HC.SUIT :
                         symbol = symbols[HC.SUIT]
-                    elif element == HC.TARGET:
+                    elif element == HC.TARGET :
                         symbol = symbols[HC.TARGET]
-                    elif element == HC.PERSON:
+                    elif element == HC.PERSON :
                         symbol = symbols[HC.PERSON]
-                    elif element == HC.GUARD:
+                    elif element == HC.GUARD :
                         symbol = symbols[HC.GUARD]
-                    elif element == HC.CIVIL:
+                    elif element == HC.CIVIL :
                         symbol = symbols[HC.CIVIL]
                     else:
                         symbol = symbols.get(element, "?")
@@ -97,12 +95,12 @@ def display_map_phase1(map: Dict, state: Dict) -> None:
                         symbol = symbols[HC.GUARD]
                         if len(element) == 3 :
                             symbol = symbol + "_" + symbols[element[2]] # orientation
-            print(" {0:^{1}} |".format(symbol, cell_width), end="")
+            print(" {0:^{1}} |".format(symbol, cell_width), end = "")
         print()
         print("+-----" * (max_x + 1) + "+")
 
 
-def display_map_phase2(map: Dict, state: Dict) -> None:
+def display_map_phase2(map: Dict, state: Dict) -> None :
     symbols = {
         HC.EMPTY: " ",
         HC.SUIT: "S",
@@ -127,26 +125,26 @@ def display_map_phase2(map: Dict, state: Dict) -> None:
     max_x = max(x for x, y in map.keys())
     max_y = max(y for x, y in map.keys())
     print("+-----" * (max_x + 1) + "+")
-    for y in range(max_y, -1, -1):
+    for y in range(max_y, -1, -1) :
         print("|", end="")
-        for x in range(max_x + 1):
+        for x in range(max_x + 1) :
             element = map.get((x, y), None)
-            if (x, y) == state["position"]:
+            if (x, y) == state["position"] :
                 symbol = symbols[state["orientation"]]
             else:
-                if element == HC.PIANO_WIRE and state["has_weapon"]:
+                if element == HC.PIANO_WIRE and state["has_weapon"] :
                     symbol = symbols[HC.EMPTY]
-                elif element == HC.SUIT and state["has_suit"]:
+                elif element == HC.SUIT and state["has_suit"] :
                     symbol = symbols[HC.EMPTY]
-                elif element == HC.TARGET and state["is_target_down"]:
+                elif element == HC.TARGET and state["is_target_down"] :
                     symbol = symbols[HC.EMPTY]
                 else:
                     symbol = symbols.get(element, "?")
-            print(" {0:^{1}} |".format(symbol, cell_width), end="")
+            print(" {0:^{1}} |".format(symbol, cell_width), end = "")
         print()
         print("+-----" * (max_x + 1) + "+")
 
-def all_cases_certaines(nb_lignes, nb_colonnes) -> List :
+def all_cases_certaines(nb_lignes: int, nb_colonnes: int) -> List :
 
     which = []
 
@@ -172,7 +170,7 @@ def map_matrix_to_dict(map: List) -> Dict :
 
     return result
 
-def get_map_next_js(map: List) -> Dict :
+def get_map_next_js(map: Grid) -> Dict :
 
     nb_colonne = len(map[0])
     nb_ligne = len(map)
@@ -191,48 +189,48 @@ def get_map_next_js(map: List) -> Dict :
 
 #-----------------------------AFFICHAGE MAP------------------------------------------------
 
-def get_offset(entity: int) -> Tuple[int, int]:
-    if entity in [HC.GUARD_N, HC.CIVIL_N]:
+def get_offset(entity: PropositionnalVariable) -> Tuple[int, int] :
+    if entity in [HC.GUARD_N, HC.CIVIL_N] :
         return (0, 1)
-    if entity in [HC.GUARD_E, HC.CIVIL_E]:
+    if entity in [HC.GUARD_E, HC.CIVIL_E] :
         return (1, 0)
-    if entity in [HC.GUARD_S, HC.CIVIL_S]:
+    if entity in [HC.GUARD_S, HC.CIVIL_S] :
         return (0, -1)
-    if entity in [HC.GUARD_W, HC.CIVIL_W]:
+    if entity in [HC.GUARD_W, HC.CIVIL_W] :
         return (-1, 0)
     return (0, 0)
 
-def case_vis(x, y, dx, dy, dist, nb_ligne, nb_colonne):
+def case_vis(x: int, y: int, dx: int, dy: int, dist: int, nb_ligne: int, nb_colonne: int) -> List :
     res = []
-    print(f"{x},{y}", end="")
+
     for _ in range(dist):
         x += dx
         y += dy
 
-        if x < 0 or y < 0 or x >= nb_colonne or y >= nb_ligne:
+        if x < 0 or y < 0 or x >= nb_colonne or y >= nb_ligne :
             break
 
         res.append((x, y))
 
     return res
 
-def all_dangerous_cases(grid):
+def all_dangerous_cases(grid: Grid) -> List :
     dangerous = []
 
     nb_ligne = len(grid)
     nb_colonne = len(grid[0])
 
-    for y in range(nb_ligne):
-        for x in range(nb_colonne):
+    for y in range(nb_ligne) :
+        for x in range(nb_colonne) :
 
             cell = grid[y][x]
 
-            if cell in [HC.GUARD_N, HC.GUARD_E, HC.GUARD_S, HC.GUARD_W]:
+            if cell in [HC.GUARD_N, HC.GUARD_E, HC.GUARD_S, HC.GUARD_W] :
                 dx, dy = get_offset(cell)
                 res = case_vis(x, nb_ligne - 1 - y, dx, dy, 2, nb_ligne, nb_colonne)
                 dangerous += res
 
-            elif cell in [HC.CIVIL_N, HC.CIVIL_E, HC.CIVIL_S, HC.CIVIL_W]:
+            elif cell in [HC.CIVIL_N, HC.CIVIL_E, HC.CIVIL_S, HC.CIVIL_W] :
                 dx, dy = get_offset(cell)
                 res = case_vis(x, nb_ligne - 1 - y, dx, dy, 1, nb_ligne, nb_colonne)
                 dangerous += res
@@ -240,7 +238,7 @@ def all_dangerous_cases(grid):
     return list(set(dangerous))
 
 
-def convert_dangerous_cases(dangerous):
+def convert_dangerous_cases(dangerous: List) -> List :
     res = [f"{x},{y}" for (x, y) in dangerous]
     return res
 
@@ -285,10 +283,10 @@ class SATEngine:
     def check(self) :
         return self.solver.solve()
 
-    def solve(self, assumptions=None) :
+    def solve(self, assumptions = None) :
         if assumptions is None:
             assumptions = []
-        return self.solver.solve(assumptions=assumptions)
+        return self.solver.solve(assumptions = assumptions)
 
     def model(self) :
         return self.solver.get_model()
@@ -299,7 +297,7 @@ class Map():
         
         self.nb_lignes = m
         self.nb_colonnes = n
-        self.nb_cases_a_trouver = int(n*m*0.95)
+        self.nb_cases_a_trouver = int(n * m * 0.95)
 
         self.cases_connues = ["0,0"]
         self.nb_variables = 12
@@ -323,7 +321,7 @@ class Map():
         self.nb_civils = nb_civils
         self.nb_var_prop = self.nb_lignes * self.nb_colonnes * self.nb_variables
 
-        self.grille_scores = np.ones((self.nb_lignes,self.nb_colonnes)) * 20
+        self.grille_scores = np.ones((self.nb_lignes, self.nb_colonnes)) * 20
 
         self.sat = SATEngine()
 
@@ -364,6 +362,7 @@ class Map():
             return HC.UNKNOWN 
 
     def reconstruct_map_for_state(self, dico: Dict) -> Dict :
+        # replace model types by real type of person from referee
         reonstruction_person = {
             (HC.PERSON, HC.CIVIL, HC.NORTH) : HC.CIVIL_N,
             (HC.PERSON, HC.CIVIL, HC.SOUTH) : HC.CIVIL_E,
@@ -399,11 +398,9 @@ class Map():
 
         return [y, x, value]
     
-    def init_var_Map(self) -> None:
+    def init_var_Map(self) -> None :
 
-        print("gardes", self.nb_gardes, ", civils", self.nb_civils)
-
-        # Calcule le plus grand ID utilisé par cell_to_variable
+        # compute the highest id used by cell_to_variable
         max_var = max(
             self.cell_to_variable(y, x, v)
             for y in range(self.nb_lignes)
@@ -413,11 +410,12 @@ class Map():
                     self.north, self.south, self.east, self.west]
         )
 
-        self.vpool = IDPool(occupied=[[1, max_var]])
+        # create the pool based on all possible ids
+        self.vpool = IDPool(occupied = [[1, max_var]])
         clauses = []
 
         # =====================================================
-        # 1) EXACTLY ONE TYPE PAR CASE
+        # 1) EXACTLY ONE TYPE BY CASE
         # =====================================================
         types_case = [
             self.rien,
@@ -428,8 +426,8 @@ class Map():
             self.personne
         ]
 
-        for y in range(self.nb_lignes):
-            for x in range(self.nb_colonnes):
+        for y in range(self.nb_lignes) :
+            for x in range(self.nb_colonnes) :
 
                 lits = [
                     self.cell_to_variable(y, x, t)
@@ -437,20 +435,20 @@ class Map():
                 ]
 
                 cnf = CardEnc.equals(
-                    lits=lits,
-                    bound=1,
-                    vpool=self.vpool,
-                    encoding=EncType.seqcounter
+                    lits = lits,
+                    bound = 1,
+                    vpool = self.vpool,
+                    encoding = EncType.seqcounter
                 )
 
                 clauses.extend(cnf.clauses)
 
         # =====================================================
-        # 2) OBJETS UNIQUES
+        # 2) UNIQUE OBJECTS
         # =====================================================
         uniques = [self.corde, self.costume, self.cible]
 
-        for obj in uniques:
+        for obj in uniques :
 
             lits = [
                 self.cell_to_variable(y, x, obj)
@@ -459,41 +457,41 @@ class Map():
             ]
 
             cnf = CardEnc.equals(
-                lits=lits,
-                bound=1,
-                vpool=self.vpool,
-                encoding=EncType.seqcounter
+                lits = lits,
+                bound = 1,
+                vpool = self.vpool,
+                encoding = EncType.seqcounter
             )
 
             clauses.extend(cnf.clauses)
 
         # =====================================================
-        # 3) PERSONNE ⇔ ROLE (guard XOR civil)
+        # 3) PERSONNE = ROLE (guard XOR civil)
         # =====================================================
-        for y in range(self.nb_lignes):
-            for x in range(self.nb_colonnes):
+        for y in range(self.nb_lignes) :
+            for x in range(self.nb_colonnes) :
 
                 p = self.cell_to_variable(y, x, self.personne)
                 g = self.cell_to_variable(y, x, self.guard)
                 c = self.cell_to_variable(y, x, self.civil)
 
-                # guard → personne
+                # guard -> personne
                 clauses.append([-g, p])
 
-                # civil → personne
+                # civil -> personne
                 clauses.append([-c, p])
 
-                # pas les deux
+                # a person can't be guard and civil at the same time
                 clauses.append([-g, -c])
 
-                # personne → guard OR civil
+                # personne -> guard OR civil
                 clauses.append([-p, g, c])
 
         # =====================================================
         # 4) ORIENTATIONS
         # =====================================================
-        for y in range(self.nb_lignes):
-            for x in range(self.nb_colonnes):
+        for y in range(self.nb_lignes) :
+            for x in range(self.nb_colonnes) :
 
                 p = self.cell_to_variable(y, x, self.personne)
                 g = self.cell_to_variable(y, x, self.guard)
@@ -506,23 +504,23 @@ class Map():
 
                 orient = [n, s, e, w]
 
-                # guard → at least one orientation
+                # guard -> at least one orientation
                 clauses.append([-g, n, s, e, w])
 
-                # civil → at least one orientation
+                # civil -> at least one orientation
                 clauses.append([-c, n, s, e, w])
 
                 # at most one orientation
                 cnf = CardEnc.atmost(
-                    lits=orient,
-                    bound=1,
-                    vpool=self.vpool,
-                    encoding=EncType.seqcounter
+                    lits = orient,
+                    bound = 1,
+                    vpool = self.vpool,
+                    encoding = EncType.seqcounter
                 )
                 clauses.extend(cnf.clauses)
 
-                # orientation → personne
-                for o in orient:
+                # orientation -> personne
+                for o in orient :
                     clauses.append([-o, p])
 
         # =====================================================
@@ -535,10 +533,10 @@ class Map():
         ]
 
         cnf = CardEnc.equals(
-            lits=personne_vars,
-            bound=self.nb_gardes + self.nb_civils,
-            vpool=self.vpool,
-            encoding=EncType.seqcounter
+            lits = personne_vars,
+            bound = self.nb_gardes + self.nb_civils,
+            vpool = self.vpool,
+            encoding = EncType.seqcounter
         )
 
         clauses.extend(cnf.clauses)
@@ -553,10 +551,10 @@ class Map():
         ]
 
         cnf = CardEnc.equals(
-            lits=guard_vars,
-            bound=self.nb_gardes,
-            vpool=self.vpool,
-            encoding=EncType.seqcounter
+            lits = guard_vars,
+            bound = self.nb_gardes,
+            vpool = self.vpool,
+            encoding = EncType.seqcounter
         )
 
         clauses.extend(cnf.clauses)
@@ -571,10 +569,10 @@ class Map():
         ]
 
         cnf = CardEnc.equals(
-            lits=civil_vars,
-            bound=self.nb_civils,
-            vpool=self.vpool,
-            encoding=EncType.seqcounter
+            lits = civil_vars,
+            bound = self.nb_civils,
+            vpool = self.vpool,
+            encoding = EncType.seqcounter
         )
 
         clauses.extend(cnf.clauses)
@@ -582,10 +580,10 @@ class Map():
         # =====================================================
         # 8) LOAD INTO SOLVER
         # =====================================================
-        for clause in clauses:
+        for clause in clauses :
             self.sat.add_clause(clause)
 
-            if not self.sat.check():
+            if not self.sat.check() :
                 print(clause)
                 raise Exception("Init UNSAT (model inconsistent)")
 
@@ -599,61 +597,61 @@ class Map():
             not self.sat.solve(assumptions = [-var])
         )
 
-    def var_mur(self, pos: Position) -> List :
+    def var_mur(self, pos: Position) -> Clause :
         return [self.cell_to_variable(pos[1], pos[0], self.mur)]
 
-    def var_corde(self, pos: Position) -> List :
+    def var_corde(self, pos: Position) -> Clause :
         return [self.cell_to_variable(pos[1], pos[0], self.corde)]
 
-    def var_costume(self, pos: Position) -> List :
+    def var_costume(self, pos: Position) -> Clause :
         return [self.cell_to_variable(pos[1], pos[0], self.costume)]
 
-    def var_rien(self, pos: Position) -> List :
+    def var_rien(self, pos: Position) -> Clause :
         return [self.cell_to_variable(pos[1], pos[0], self.rien)]
 
-    def var_cible(self, pos: Position) -> List :
+    def var_cible(self, pos: Position) -> Clause :
         return [self.cell_to_variable(pos[1], pos[0], self.cible)]
 
-    def var_personne(self, pos: Position) -> List :
+    def var_personne(self, pos: Position) -> Clause :
         return [self.cell_to_variable(pos[1], pos[0], self.personne)]
 
-    def var_not_personne(self, pos: Position) -> List :
+    def var_not_personne(self, pos: Position) -> Clause :
         return [-self.cell_to_variable(pos[1], pos[0], self.personne)]
 
-    def var_guard(self, pos: Position) -> List :
+    def var_guard(self, pos: Position) -> Clause :
         return [self.cell_to_variable(pos[1], pos[0], self.guard)]
 
-    def var_not_guard(self, pos: Position) -> List :
+    def var_not_guard(self, pos: Position) -> Clause :
         return [-self.cell_to_variable(pos[1], pos[0], self.guard)]
 
-    def var_civil(self, pos: Position) -> List :
+    def var_civil(self, pos: Position) -> Clause :
         return [self.cell_to_variable(pos[1], pos[0], self.civil)]
 
-    def var_not_civil(self, pos: Position) -> List :
+    def var_not_civil(self, pos: Position) -> Clause :
         return [-self.cell_to_variable(pos[1], pos[0], self.civil)]
 
-    def var_north(self, pos: Position) -> List :
+    def var_north(self, pos: Position) -> Clause :
         return [self.cell_to_variable(pos[1], pos[0], self.north)]
 
-    def var_south(self, pos: Position) -> List :
+    def var_south(self, pos: Position) -> Clause :
         return [self.cell_to_variable(pos[1], pos[0], self.south)]
 
-    def var_east(self, pos: Position) -> List :
+    def var_east(self, pos: Position) -> Clause :
         return [self.cell_to_variable(pos[1], pos[0], self.east)]
     
-    def var_west(self, pos: Position) -> List :
+    def var_west(self, pos: Position) -> Clause :
         return [self.cell_to_variable(pos[1], pos[0], self.west)]
 
-    def specify_person(self, y, x) :
+    def specify_person(self, y: int, x: int) -> None :
 
         natures = [
             self.civil,
             self.guard,
         ]
 
-        for nature in natures:
+        for nature in natures :
             v = self.cell_to_variable(y, x, nature)
-            if self.is_true(v):
+            if self.is_true(v) :
                 role = nature
                 break
 
@@ -664,9 +662,9 @@ class Map():
             self.east,
         ]
 
-        for orientation in orientations:
+        for orientation in orientations :
             v = self.cell_to_variable(y, x, orientation)
-            if self.is_true(v):
+            if self.is_true(v) :
                 look = orientation
                 break
 
@@ -687,11 +685,11 @@ class Map():
             self.personne
         ]
 
-        for nature in natures:
+        for nature in natures :
 
             v = self.cell_to_variable(y, x, nature)
 
-            if self.is_true(v):
+            if self.is_true(v) :
                 if nature == self.personne :
                     self.specify_person(y, x)
                 return True
@@ -719,7 +717,7 @@ class Map():
 
         pourcentage = nb / (self.nb_lignes * self.nb_colonnes)
 
-        if pourcentage >= 0.95 :
+        if pourcentage >= 0.95 : # threshold
             print("Carte suffisamment reconstruite")
             return True
         
@@ -751,32 +749,32 @@ class Map():
     def case_not_safe(self, pos: Position) -> bool :
         return pos in self.dangerous_cases
 
-    def known_Map(self) -> Dict:
+    def known_Map(self) -> Dict :
 
-        if not self.sat.solve():
+        if not self.sat.solve() :
             print("KNOWN MAP SAT global = False")
             return {}
 
         modele = self.sat.model()
 
-        # Borne max des variables "métier"
+        # set threshold of real variables
         max_var_metier = self.nb_lignes * self.nb_colonnes * self.nb_variables
 
         dictionnaire = {}
 
-        for var in modele:
+        for var in modele :
 
-            if var <= 0:
+            if var <= 0 :
                 continue
 
-            # ← NOUVEAU : ignorer les variables auxiliaires de CardEnc
+            # ignore auxiliary variables from CardEnc
             if var > max_var_metier:
                 continue
 
             ligne, colonne, num_objet = self.variable_to_cell(var)
             objet = self.num_to_obj_HC(num_objet)
 
-            if (colonne, ligne) not in dictionnaire:
+            if (colonne, ligne) not in dictionnaire :
                 dictionnaire[(colonne, ligne)] = []
 
             dictionnaire[(colonne, ligne)].append(objet)

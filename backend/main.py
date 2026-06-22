@@ -5,7 +5,7 @@ import time
 
 current_map = "map2"
 
-def main():
+def main() :
     affiche_star_1()
     phase1 = Phase1(current_map)
     phase1.init_phase1()
@@ -23,5 +23,5 @@ def main():
         phase2.affichage_jeu_phase2()
         time.sleep(0.5)
 
-if __name__ == "__main__":
+if __name__ == "__main__" :
     main()

@@ -12,7 +12,7 @@ Literal = int
 Clause = List[Literal]
 ClauseBase = List[Clause]
 Model = List[Literal]
-Position = List[int]
+Position = Tuple[int, int]
 Orientation = str #N,E,S,O
 
 
@@ -112,13 +112,13 @@ class Phase1():
         return result
 
     def get_guard_offset(self, guard: int) -> Tuple :
-        if guard == HC.GUARD_N:
+        if guard == HC.GUARD_N :
             offset = 0, 1
-        elif guard == HC.GUARD_E:
+        elif guard == HC.GUARD_E :
             offset = 1, 0
-        elif guard == HC.GUARD_S:
+        elif guard == HC.GUARD_S :
             offset = 0, -1
-        elif guard == HC.GUARD_W:
+        elif guard == HC.GUARD_W :
             offset = -1, 0
 
         return offset
@@ -131,20 +131,20 @@ class Phase1():
         for _ in range(0, dist) :
             pos = x + offset_x, y + offset_y
             x, y = pos
-            if x >= self.state["n"] or y >= self.state["m"] or x < 0 or y < 0:
+            if x >= self.state["n"] or y >= self.state["m"] or x < 0 or y < 0 :
                 break
             vision.append((x, y))
 
         return vision
     
     def get_civil_offset(self, civil: int) -> Tuple :
-        if civil == HC.CIVIL_N:
+        if civil == HC.CIVIL_N :
             offset = 0, 1
-        elif civil == HC.CIVIL_E:
+        elif civil == HC.CIVIL_E :
             offset = 1, 0
-        elif civil == HC.CIVIL_S:
+        elif civil == HC.CIVIL_S :
             offset = 0, -1
-        elif civil == HC.CIVIL_W:
+        elif civil == HC.CIVIL_W :
             offset = -1, 0
 
         return offset
@@ -157,7 +157,7 @@ class Phase1():
 
         pos = x + offset_x, y + offset_y
         x, y = pos
-        if self.state["n"] > x >= 0 and self.state["m"] > y >= 0:
+        if self.state["n"] > x >= 0 and self.state["m"] > y >= 0 :
             vision.append((pos))
         return vision
     
@@ -197,8 +197,6 @@ class Phase1():
                 is_a_personne = True # detect a person
                 cases_vues = self.case_guard_vis(coord_case[0], coord_case[1], element)
 
-                # print(f"vision du garde ({coord_case[0]},{coord_case[1]}) : {cases_vues}")
-
                 clause_type = self.map.var_guard(coord_case) # clause de guard
                 self.map.sat.add_clause(clause_type)
                 clause_not_type = self.map.var_not_civil(coord_case) # clause de non civil
@@ -224,12 +222,10 @@ class Phase1():
                 is_a_personne = True
                 cases_vues = self.case_civil_vis(coord_case[0], coord_case[1], element)
 
-                # print(f"vision du civil ({coord_case[0]},{coord_case[1]}) : {cases_vues}")
-
-                clause_type = self.map.var_civil(coord_case) # clause de civil
-                self.map.sat.add_clause(clause_type) # ajout de la clause
-                clause_not_type = self.map.var_not_guard(coord_case) # clause de non guard
-                self.map.sat.add_clause(clause_not_type) # ajout de la clause
+                clause_type = self.map.var_civil(coord_case) # civil clause
+                self.map.sat.add_clause(clause_type) # add clause
+                clause_not_type = self.map.var_not_guard(coord_case) # non guard clause
+                self.map.sat.add_clause(clause_not_type) # add clause
 
                 for case in cases_vues : 
                     self.map.set_grille_score(case, -10)
@@ -255,9 +251,6 @@ class Phase1():
                 self.map.set_grille_score(coord_case, score_case)
 
             self.map.sat.add_clause(clause_personne)
-
-            # print(f"{element} en ({coord_case[0]}, {coord_case[1]})", end="|")
-        # print()
             
         return nb_cases_visible
 
@@ -272,7 +265,7 @@ class Phase1():
         guard_zone = []
         guard_vars = []
         
-        if self.state["is_in_guard_range"]:
+        if self.state["is_in_guard_range"] :
 
             for dx, dy in [
                 (1,0), (-1,0),
@@ -283,27 +276,27 @@ class Phase1():
                 x = hitman_pos[0] + dx
                 y = hitman_pos[1] + dy
 
-                if 0 <= x < self.map.nb_colonnes and 0 <= y < self.map.nb_lignes:
+                if 0 <= x < self.map.nb_colonnes and 0 <= y < self.map.nb_lignes :
                     guard_zone.append((x,y))
 
                     guard_vars.append(
                         self.map.var_guard((x,y))[0]
                     )
         
-        if guard_vars:
+        if guard_vars :
             cnf = CardEnc.atleast(
-                lits=guard_vars,
-                bound=1,
-                vpool=self.map.vpool,
-                encoding=EncType.seqcounter
+                lits = guard_vars,
+                bound = 1,
+                vpool = self.map.vpool,
+                encoding = EncType.seqcounter
             )
 
-            for clause in cnf.clauses:
+            for clause in cnf.clauses :
                 self.map.sat.add_clause(clause)
 
-        if nb_personne_entendue == 0:
+        if nb_personne_entendue == 0 :
 
-            for coord in hear_zone:
+            for coord in hear_zone :
                 self.map.sat.add_clause(
                     self.map.var_not_personne(coord)
                 )
@@ -312,7 +305,7 @@ class Phase1():
         personnes_connues = 0
         variables_inconnues = []
 
-        for coord in coord_cases:
+        for coord in coord_cases :
 
             v_personne = self.map.var_personne(coord)[0]
 
@@ -330,16 +323,15 @@ class Phase1():
                 continue
 
             # inconnu
-            else:
+            else :
                 # print("ITS A GUARD ZONE", guard_zone)
                 # priorité aux cases dans guard_zone
-                if coord in guard_zone:
+                if coord in guard_zone :
                     variables_inconnues.insert(0, v_personne)  # priorité haute
                 else:
                     variables_inconnues.append(v_personne)
 
         reste = nb_personne_entendue - personnes_connues
-        # print("reste", reste, "nb_personne_entendue", nb_personne_entendue, "personnes_connues", personnes_connues)
 
         if reste < 0 :
             raise Exception("hear incohérent avec les connaissances SAT")
@@ -351,14 +343,14 @@ class Phase1():
 
         # print("variables_inconnues", variables_inconnues)
 
-        if variables_inconnues:
+        if variables_inconnues :
             cnf = CardEnc.equals(
-                lits=variables_inconnues,
-                bound=reste,
-                vpool=self.map.vpool,
-                encoding=EncType.seqcounter
+                lits = variables_inconnues,
+                bound = reste,
+                vpool = self.map.vpool,
+                encoding = EncType.seqcounter
             )
-            for clause in cnf.clauses:
+            for clause in cnf.clauses :
                 self.map.sat.add_clause(clause)
 
     #=================================================================================
@@ -380,13 +372,12 @@ class Phase1():
                     if neigh in known_map and self.map.get_grille_score(neigh) != 20 :
                         frontier.append(pos)
                         break
-        # print("frontier", frontier)
         return frontier
 
-    def heuristique(self, position: Tuple, target: Tuple) -> int :
+    def heuristique(self, position: Position, target: Position) -> int :
         return abs(position[0] - target[0]) + abs(position[1] - target[1])
                 
-    def exploration_score(self, pos) -> int :
+    def exploration_score(self, pos: Position) -> int :
 
         score = 0
 
@@ -397,14 +388,14 @@ class Phase1():
         dist = self.heuristique(self.state["position"], pos)
         score -= dist
         # déjà visité
-        if pos in self.phase1_list:
+        if pos in self.phase1_list :
             score -= 20
         # personne possible
-        if self.map.case_maybe_personne(pos):
+        if self.map.case_maybe_personne(pos) :
             # print("MAYBE PERSON", pos)
             score -= 15
         # vision connue
-        if self.map.case_not_safe(pos):
+        if self.map.case_not_safe(pos) :
             # print("NOT SAFE", pos)
             score -= 20
 
@@ -426,14 +417,13 @@ class Phase1():
 
             s = self.exploration_score(pos)
 
-            if s > best_score:
+            if s > best_score :
                 best_score = s
                 best = pos
 
         return best
     
-    def est_position_valide_phase1(self, pos) -> bool :
-        # print("thinking position...", end = "")
+    def est_position_valide_phase1(self, pos: Position) -> bool :
         carte = self.map.known_Map().keys()
         if pos not in carte :
             return False
@@ -447,16 +437,15 @@ class Phase1():
         return True
     
     def movement_cost(self, pos) -> int :
-        # print("thinking movement...", end = "")
         cost = 1
 
-        if pos in self.phase1_list:
+        if pos in self.phase1_list :
             cost += 3
 
-        if self.map.case_maybe_personne(pos):
+        if self.map.case_maybe_personne(pos) :
             cost += 10
 
-        if self.map.case_not_safe(pos):
+        if self.map.case_not_safe(pos) :
             cost += 10
 
         return cost
@@ -464,7 +453,6 @@ class Phase1():
     def build_path_exploration(self) -> List | None :
 
         target = self.choose_frontier()
-        # print("target chosen", target)
 
         if target is None:
             return None
@@ -515,7 +503,7 @@ class Phase1():
 
         return None
     
-    def direction(self, initial: Tuple, final: Tuple) -> Orientation :
+    def direction(self, initial: Position, final: Position) -> Orientation :
         pos = initial
         res = tuple(x - y for x, y in zip(final, pos))
         if abs(res[0]) > abs(res[1]) :
@@ -529,7 +517,7 @@ class Phase1():
             elif res[1] > 0 :
                 return "N"
     
-    def get_turns(self, direction: Tuple, hitman: Tuple) -> int :
+    def get_turns(self, direction: Tuple, hitman: Position) -> int :
         listeasc = ['N', 'E', 'S', 'W']
         if direction == hitman :
             return 0
@@ -563,7 +551,7 @@ class Phase1():
             liste += ["hr.move()"]
         return liste
     
-    def mouvement(self, initial: Tuple, final: Tuple, liste: List, state: Dict) -> List :
+    def mouvement(self, initial: Position, final: Position, liste: List, state: Dict) -> List :
         pos = initial
         if len(liste) == 1 :
             orient = state["orientation"].name
@@ -589,7 +577,6 @@ class Phase1():
     def prepare_actions(self) -> None :
 
         self.current_path = self.build_path_exploration()
-        # print("path", self.current_path)
 
         self.actions = self.build_actions_from_path(self.current_path)
 
@@ -640,9 +627,6 @@ class Phase1():
 
     def step(self) -> Dict :
 
-        # print("SAT global =", self.map.sat.solve([]))
-        # print(self.map.grille_scores)
-
         if self.map.early_stopping() :
             self.done = True
             return self.get_state()
@@ -664,18 +648,16 @@ class Phase1():
         self.affichage_jeu_phase1()
 
         if not self.next_step_valid() :
-
-            # print("NEXT STEP BLOQUE")
-
+            # if next step not possible
             self.actions = []
             self.prepare_actions()
 
-        # Plus d'actions à jouer ?
         if len(self.actions) == 0 :
-
+            # if no more actions 
             self.prepare_actions()
 
             if len(self.actions) == 0 :
+                # if still no more, phase1 is over
                 self.done = True
                 return self.get_state()
 

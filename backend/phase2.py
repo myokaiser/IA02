@@ -11,7 +11,7 @@ Literal = int
 Clause = List[Literal]
 ClauseBase = List[Clause]
 Model = List[Literal]
-Position = List[int] # position x y
+Position = Tuple[int, int] # position x y
 Orientation = str #N,E,S,O
 
 #-----------------------------Class Phase2------------------------------------------------
@@ -123,59 +123,59 @@ class Phase2() :
                 else:
                     return diff
 
-    def heuristique(self, position: Tuple, target: Tuple) -> int :
+    def heuristique(self, position: Position, target: Position) -> int :
         return abs(position[0] - target[0]) + abs(position[1] - target[1])
 
-    def vision_guard(self, pos, carte):
+    def vision_guard(self, pos: Position, carte: Dict) -> bool :
 
-        for (gx, gy), case in carte.items():
+        for (gx, gy), case in carte.items() :
 
-            if "GUARD_" not in case.name:
+            if "GUARD_" not in case.name :
                 continue
 
             dx, dy = {
-                HC.GUARD_N: (0, 1),
-                HC.GUARD_S: (0, -1),
-                HC.GUARD_E: (1, 0),
-                HC.GUARD_W: (-1, 0),
+                HC.GUARD_N : (0, 1),
+                HC.GUARD_S : (0, -1),
+                HC.GUARD_E : (1, 0),
+                HC.GUARD_W : (-1, 0),
             }[case]
 
             x, y = gx, gy
 
-            for _ in range(2):
+            for _ in range(2) :
 
                 x += dx
                 y += dy
 
-                if (x, y) not in carte:
+                if (x, y) not in carte :
                     break
 
-                if (x, y) == pos:
+                if (x, y) == pos :
                     return True
 
-                if carte[(x, y)] != HC.EMPTY:
+                if carte[(x, y)] != HC.EMPTY :
                     break
 
         return False
 
-    def vision_civil(self, pos, carte):
+    def vision_civil(self, pos: Position, carte: Dict) -> bool :
 
         for (cx, cy), case in carte.items():
 
             if "CIVIL_" not in case.name:
                 continue
 
-            if (cx, cy) == pos:
+            if (cx, cy) == pos :
                 return True
 
             dx, dy = {
-                HC.CIVIL_N: (0, 1),
-                HC.CIVIL_S: (0, -1),
-                HC.CIVIL_E: (1, 0),
-                HC.CIVIL_W: (-1, 0),
+                HC.CIVIL_N : (0, 1),
+                HC.CIVIL_S : (0, -1),
+                HC.CIVIL_E : (1, 0),
+                HC.CIVIL_W : (-1, 0),
             }[case]
 
-            if (cx + dx, cy + dy) == pos:
+            if (cx + dx, cy + dy) == pos :
                 return True
 
         return False
@@ -189,8 +189,8 @@ class Phase2() :
         else :
             return 1
 
-    def orientation_choix(self, pos: Tuple, final: Tuple, carte: Dict, choice: int) -> List :
-        #bouge ou oriente le perso en fonction du resultat de get_turns
+    def orientation_choix(self, pos: Position, final: Position, carte: Dict, choice: int) -> List :
+        #move or set new position for hitman depending on the result of get_turns
         liste = []
         if choice == 0 and self.neutra_guard(pos, final, carte) == 2 :
             liste += ["hr.neutralize_guard()"]
@@ -209,7 +209,7 @@ class Phase2() :
             liste += ["hr.move()"]
         return liste
 
-    def mouvement(self, initial: Tuple, final: Tuple, liste: List, state: Dict, carte: Dict) -> List :
+    def mouvement(self, initial: Position, final: Position, liste: List, state: Dict, carte: Dict) -> List :
         pos = initial
         if len(liste) == 1 :
             orient = state["orientation"].name
@@ -219,27 +219,27 @@ class Phase2() :
         choix = self.get_turns(direct, orient)
         return self.orientation_choix(pos, final, carte, choix)
 
-    def est_position_valide(self, hitman: Tuple, position: Tuple, carte: Dict, maniere: bool, neutra: bool) -> bool :
-        if position not in carte:
+    def est_position_valide(self, hitman: Position, position: Position, carte: Dict, neutra: bool) -> bool :
+        if position not in carte :
             return False
 
         case = carte[position]
 
-        # mur
-        if case == HC.WALL:
+        # wall
+        if case == HC.WALL :
             return False
 
-        # garde
-        if not neutra and "GUARD_" in case.name:
+        # guard
+        if not neutra and "GUARD_" in case.name :
             return False
 
-        # garde neutralisable ?
-        if neutra and self.neutra_guard(hitman, position, carte) == 0:
+        # neutralize guard
+        if neutra and self.neutra_guard(hitman, position, carte) == 0 :
             return False
 
         return True
 
-    def matrix_to_dico(self, ref: List[List]) -> Dict :
+    def matrix_to_dico(self, ref : List[List]) -> Dict :
         carte = {}
         for y, row in enumerate(ref) :
             for x, cell in enumerate(row) :
@@ -250,9 +250,9 @@ class Phase2() :
 
         self.current_pos = self.state["position"]
 
-        # Cas particulier :
-        # on voulait passer devant les gardes mais on n'a pas encore le costume
-        if self.way and not self.state["has_suit"]:
+        # Special case :
+        # would like to walk in front of guard but doesn't have the suit yet
+        if self.way and not self.state["has_suit"] :
 
             self.target = self.trouver_suit(self.carte)
             self.goal = "suit"
@@ -260,14 +260,14 @@ class Phase2() :
             self.neutra = False
             return
 
-        # Pas encore arrivé à destination
+        # not yet arrived to destination
         if self.current_pos != self.target :
             return
 
         print("Objectif atteint :", self.goal, "à", self.current_pos)
 
         # ==========================
-        # CORDE
+        # PIANO WIRE
         # ==========================
 
         if self.goal == "weapon" :
@@ -286,14 +286,14 @@ class Phase2() :
             return
 
         # ==========================
-        # CIBLE
+        # TARGET
         # ==========================
 
         if self.goal == "target" :
             self.state = self.hitman.kill_target()
 
             if self.state["is_target_down"] :
-                self.target = (0, 0)
+                self.target = (0, 0) # final mission is to get back to the entrance
                 self.goal = "finish_the_mission"
 
                 if self.state["has_suit"] :
@@ -304,7 +304,7 @@ class Phase2() :
             return
 
         # ==========================
-        # COSTUME
+        # SUIT
         # ==========================
 
         if self.goal == "suit" :
@@ -323,7 +323,7 @@ class Phase2() :
             return
 
         # ==========================
-        # SORTIE
+        # EXIT
         # ==========================
 
         if self.goal == "finish_the_mission" :
@@ -454,12 +454,12 @@ class Phase2() :
         if now - self.last_update < self.delay :
             return self.get_state()
 
-        # Plus d'actions à jouer ?
         if len(self.actions) == 0 :
-
+            # if no more actions 
             self.prepare_actions()
 
             if len(self.actions) == 0 :
+                # if still no more, phase2 is over
                 self.done = True
                 return self.get_state()
 
