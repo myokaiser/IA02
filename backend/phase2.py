@@ -359,7 +359,7 @@ class Phase2() :
                     current_pos[1] + dy
                 )
 
-                if (self.est_position_valide(current_pos, new_pos, self.carte, self.way, self.neutra)
+                if (self.est_position_valide(current_pos, new_pos, self.carte, self.neutra)
                     and new_pos not in visited
                 ) :
 
